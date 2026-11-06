@@ -1,0 +1,2 @@
+-keep class com.runwise.app.data.model.** { *; }
+-keepclassmembers class com.runwise.app.data.model.** { *; }
