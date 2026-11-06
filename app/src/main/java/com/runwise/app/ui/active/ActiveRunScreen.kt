@@ -455,6 +455,9 @@ fun ActiveRunHudPage(
     val currentPace = runState.currentPaceSecPerKm
 
     val paceColor = when {
+        runState.stepType == com.runwise.app.data.model.StepType.WARMUP ||
+        runState.stepType == com.runwise.app.data.model.StepType.COOLDOWN ||
+        runState.stepType == com.runwise.app.data.model.StepType.RECOVERY ||
         targetPace <= 0 -> PaceOnTarget
         currentPace <= 0 -> TextMutedDark
         currentPace < targetPace - 10 -> PaceTooFast
@@ -463,6 +466,9 @@ fun ActiveRunHudPage(
     }
 
     val paceStatusLabel = when {
+        runState.stepType == com.runwise.app.data.model.StepType.WARMUP -> "WARM-UP (EASY / FREE PACE)"
+        runState.stepType == com.runwise.app.data.model.StepType.COOLDOWN -> "COOL-DOWN (EASY / FREE PACE)"
+        runState.stepType == com.runwise.app.data.model.StepType.RECOVERY -> "RECOVERY (REST / WALK)"
         targetPace <= 0 -> "FREE PACING"
         currentPace <= 0 -> "CALIBRATING GPS..."
         currentPace < targetPace - 10 -> "TOO FAST (EASE OFF)"

@@ -300,7 +300,7 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
         remainingStepMeters: Double? = null,
         rollingSpeedMps: Double? = null
     ) {
-        if (isMuted || !isTtsReady) return
+        if (isMuted || !isTtsReady || targetPaceSecPerKm <= 0) return
 
         // 1. Startup suppression
         if (currentDistanceMeters < 200) return   // Suppress first 200m

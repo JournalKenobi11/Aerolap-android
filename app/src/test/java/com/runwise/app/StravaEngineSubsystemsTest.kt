@@ -263,12 +263,12 @@ class StravaEngineSubsystemsTest {
         assertNotNull(workout)
         assertEquals(9, workout.steps.size)
 
-        // Step 1: Warm Up
+        // Step 1: Warm Up (Open/free pace, no target pace constraint)
         val s1 = workout.steps[0]
         assertEquals("Warm Up", s1.title)
         assertEquals(com.runwise.app.data.model.StepType.WARMUP, s1.stepType)
         assertEquals(1000, s1.targetDistanceMeters)
-        assertEquals(420, s1.targetPaceSecPerKm) // 7:00 pace
+        assertEquals(0, s1.targetPaceSecPerKm) // Open warm up pace!
 
         // Step 2: Interval 1
         val s2 = workout.steps[1]
@@ -364,11 +364,11 @@ class StravaEngineSubsystemsTest {
         val longWorkout = com.runwise.app.util.PlanWorkoutParser.parsePlanDayToWorkout(longRunDay)
         assertEquals(3, longWorkout.steps.size)
         assertEquals(3000, longWorkout.steps[0].targetDistanceMeters) // Km 1 to 3 = 3000m ("First 3 km gentle warm-up")
-        assertEquals(410, longWorkout.steps[0].targetPaceSecPerKm)  // 6:50
+        assertEquals(0, longWorkout.steps[0].targetPaceSecPerKm)    // Open warm-up pace
         assertEquals(4000, longWorkout.steps[1].targetDistanceMeters) // Km 4 to 7 = 4000m ("Middle 4 km dialed in at 6:15")
-        assertEquals(375, longWorkout.steps[1].targetPaceSecPerKm)  // 6:15
+        assertEquals(375, longWorkout.steps[1].targetPaceSecPerKm)  // 6:15 race pace lock
         assertEquals(1500, longWorkout.steps[2].targetDistanceMeters) // Km 8 to 8.5 = 1500m ("Final 1.5 km easy cool-down")
-        assertEquals(400, longWorkout.steps[2].targetPaceSecPerKm)  // 6:40
+        assertEquals(0, longWorkout.steps[2].targetPaceSecPerKm)    // Open cool-down pace
     }
 
     @Test

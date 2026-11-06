@@ -91,8 +91,6 @@ object PlanWorkoutParser {
             if (d <= 10.0) (d * 1000).toInt() else d.toInt()
         } ?: 1000
 
-        val warmupPaceSec = warmupMatch?.groupValues?.getOrNull(2)?.let { parsePaceToSeconds(it) }?.takeIf { it > 0 } ?: 420 // default 7:00
-
         // Parse walk recovery: e.g. "90s walk recovery" or "2 minutes walking rest"
         val recoverySec = if (text.contains("2 minutes", ignoreCase = true)) {
             120
@@ -113,7 +111,7 @@ object PlanWorkoutParser {
 
         val steps = mutableListOf<WorkoutStep>()
 
-        // 1. Warm-Up Step
+        // 1. Warm-Up Step (Free/open pace, no target pace constraint)
         if (warmupDistMeters > 0) {
             steps.add(
                 WorkoutStep(
@@ -121,8 +119,8 @@ object PlanWorkoutParser {
                     stepType = StepType.WARMUP,
                     targetType = TargetType.DISTANCE,
                     targetDistanceMeters = warmupDistMeters,
-                    targetPaceSecPerKm = warmupPaceSec,
-                    targetCadenceSpm = 164
+                    targetPaceSecPerKm = 0, // No target pace for warm up
+                    targetCadenceSpm = 0
                 )
             )
         }
@@ -155,7 +153,7 @@ object PlanWorkoutParser {
             }
         }
 
-        // 3. Cool-Down Step
+        // 3. Cool-Down Step (Free/open pace, no target pace constraint)
         if (cooldownDistMeters > 0) {
             steps.add(
                 WorkoutStep(
@@ -163,8 +161,8 @@ object PlanWorkoutParser {
                     stepType = StepType.COOLDOWN,
                     targetType = TargetType.DISTANCE,
                     targetDistanceMeters = cooldownDistMeters,
-                    targetPaceSecPerKm = 0, // Open easy cool down
-                    targetCadenceSpm = 158
+                    targetPaceSecPerKm = 0, // No target pace for cool down
+                    targetCadenceSpm = 0
                 )
             )
         }
@@ -224,14 +222,17 @@ object PlanWorkoutParser {
                 else -> "Segment ${idx + 1}"
             }
 
+            val paceTarget = if (stepType == StepType.WARMUP || stepType == StepType.COOLDOWN) 0 else paceSec
+            val cadenceTarget = if (stepType == StepType.INTERVAL || stepType == StepType.RUN) 168 else 0
+
             steps.add(
                 WorkoutStep(
                     title = stepTitle,
                     stepType = stepType,
                     targetType = TargetType.DISTANCE,
                     targetDistanceMeters = distMeters,
-                    targetPaceSecPerKm = paceSec,
-                    targetCadenceSpm = if (stepType == StepType.INTERVAL) 168 else 162
+                    targetPaceSecPerKm = paceTarget,
+                    targetCadenceSpm = cadenceTarget
                 )
             )
         }
@@ -274,14 +275,17 @@ object PlanWorkoutParser {
                 else -> "Pace Lock Rep"
             }
 
+            val paceTarget = if (stepType == StepType.WARMUP || stepType == StepType.COOLDOWN) 0 else paceSec
+            val cadenceTarget = if (stepType == StepType.INTERVAL || stepType == StepType.RUN) 168 else 0
+
             steps.add(
                 WorkoutStep(
                     title = title,
                     stepType = stepType,
                     targetType = TargetType.DISTANCE,
                     targetDistanceMeters = distMeters,
-                    targetPaceSecPerKm = paceSec,
-                    targetCadenceSpm = if (stepType == StepType.INTERVAL) 168 else 162
+                    targetPaceSecPerKm = paceTarget,
+                    targetCadenceSpm = cadenceTarget
                 )
             )
         }
