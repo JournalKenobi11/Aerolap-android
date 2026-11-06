@@ -154,7 +154,7 @@ runwise-android/
 
 ### 1. Build Debug APK
 ```bash
-cd ~/projects/runwise-android
+cd runwise-android
 ./gradlew assembleDebug
 ```
 The compiled APK will be generated at:

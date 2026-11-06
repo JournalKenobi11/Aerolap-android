@@ -93,7 +93,7 @@ graph TD
 ## 3. EXHAUSTIVE COMPONENT-BY-COMPONENT SPECIFICATION
 
 ### 3.1 Application Entry: `RunwiseApplication.kt`
-- **Path:** [`app/src/main/java/com/runwise/app/RunwiseApplication.kt`](file:///home/journalkenobi/projects/runwise-android/app/src/main/java/com/runwise/app/RunwiseApplication.kt)
+- **Path:** [`app/src/main/java/com/runwise/app/RunwiseApplication.kt`](app/src/main/java/com/runwise/app/RunwiseApplication.kt)
 - **Extends:** `android.app.Application`
 - **Responsibilities:**
   - Singleton bootstrap: Initializes `RunwiseRepository.getInstance(this)` on process startup.
@@ -102,7 +102,7 @@ graph TD
 ---
 
 ### 3.2 Navigation & Coordinator: `MainActivity.kt`
-- **Path:** [`app/src/main/java/com/runwise/app/MainActivity.kt`](file:///home/journalkenobi/projects/runwise-android/app/src/main/java/com/runwise/app/MainActivity.kt)
+- **Path:** [`app/src/main/java/com/runwise/app/MainActivity.kt`](app/src/main/java/com/runwise/app/MainActivity.kt)
 - **Extends:** `ComponentActivity`
 - **Responsibilities:**
   - Dynamic Runtime Permission Verification:
@@ -125,7 +125,7 @@ graph TD
 ---
 
 ### 3.3 Core Tracking Engine: `TrackingService.kt`
-- **Path:** [`app/src/main/java/com/runwise/app/service/TrackingService.kt`](file:///home/journalkenobi/projects/runwise-android/app/src/main/java/com/runwise/app/service/TrackingService.kt)
+- **Path:** [`app/src/main/java/com/runwise/app/service/TrackingService.kt`](app/src/main/java/com/runwise/app/service/TrackingService.kt)
 - **Type:** Android `Service` (Foreground type: `location`)
 - **Implements:** `LocationListener`
 
@@ -241,7 +241,7 @@ data class RunState(
 ---
 
 ### 3.4 Hardware Cadence Tracker: `CadenceTracker.kt`
-- **Path:** [`app/src/main/java/com/runwise/app/coach/CadenceTracker.kt`](file:///home/journalkenobi/projects/runwise-android/app/src/main/java/com/runwise/app/coach/CadenceTracker.kt)
+- **Path:** [`app/src/main/java/com/runwise/app/coach/CadenceTracker.kt`](app/src/main/java/com/runwise/app/coach/CadenceTracker.kt)
 - **Implements:** `SensorEventListener`
 - **Sensors:**
   - Primary: `Sensor.TYPE_STEP_DETECTOR` (hardware step interrupt).
@@ -257,7 +257,7 @@ data class RunState(
 ---
 
 ### 3.5 Voice Coaching Engine: `AudioCoach.kt`
-- **Path:** [`app/src/main/java/com/runwise/app/coach/AudioCoach.kt`](file:///home/journalkenobi/projects/runwise-android/app/src/main/java/com/runwise/app/coach/AudioCoach.kt)
+- **Path:** [`app/src/main/java/com/runwise/app/coach/AudioCoach.kt`](app/src/main/java/com/runwise/app/coach/AudioCoach.kt)
 - **Implements:** `TextToSpeech.OnInitListener`
 - **Audio Ducking:** Requests `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` with `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE` via `UtteranceProgressListener` lifecycle so Spotify / music apps dip in volume without pausing during speech cues.
 - **Methods:**
@@ -275,7 +275,7 @@ data class RunState(
 ---
 
 ### 3.6 Data Layer & Local Storage: `RunwiseRepository.kt`
-- **Path:** [`app/src/main/java/com/runwise/app/data/repository/RunwiseRepository.kt`](file:///home/journalkenobi/projects/runwise-android/app/src/main/java/com/runwise/app/data/repository/RunwiseRepository.kt)
+- **Path:** [`app/src/main/java/com/runwise/app/data/repository/RunwiseRepository.kt`](app/src/main/java/com/runwise/app/data/repository/RunwiseRepository.kt)
 - **Pattern:** Thread-Safe Singleton
 - **Storage Contracts:**
   - `filesDir/local_activities.json`: Array of phone-recorded `ActivityItem` instances.
@@ -305,7 +305,7 @@ data class RunState(
 ---
 
 ### 3.7 Interactive Route Polyline & Mapping: `LeafletMapView.kt`
-- **Path:** [`app/src/main/java/com/runwise/app/ui/components/LeafletMapView.kt`](file:///home/journalkenobi/projects/runwise-android/app/src/main/java/com/runwise/app/ui/components/LeafletMapView.kt)
+- **Path:** [`app/src/main/java/com/runwise/app/ui/components/LeafletMapView.kt`](app/src/main/java/com/runwise/app/ui/components/LeafletMapView.kt)
 - **Primary Native Route Renderer (`NativeRouteCanvas`):**
   - **Default View (`showVectorOnly = true`):** Renders immediately upon opening with 0ms delay, zero network dependence, and zero black screens.
   - **Equirectangular Local Projection:**
