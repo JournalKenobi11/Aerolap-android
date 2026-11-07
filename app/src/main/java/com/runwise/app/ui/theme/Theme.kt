@@ -6,9 +6,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = RunwiseOrange,
+    primary = AerolapBlue,
     onPrimary = Color.White,
-    primaryContainer = RunwiseOrangeDark,
+    primaryContainer = AerolapBlueDark,
     onPrimaryContainer = Color.White,
     secondary = SportWalk,
     onSecondary = Color.Black,
@@ -23,9 +23,12 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun RunwiseTheme(content: @Composable () -> Unit) {
+fun AerolapTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = DarkColorScheme,
         content = content
     )
 }
+
+@Composable
+fun RunwiseTheme(content: @Composable () -> Unit) = AerolapTheme(content)

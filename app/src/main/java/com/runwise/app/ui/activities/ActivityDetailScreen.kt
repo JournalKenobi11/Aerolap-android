@@ -159,7 +159,7 @@ fun ActivityDetailScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = RunwiseOrange)
+                CircularProgressIndicator(color = AerolapBlue)
             }
         } else if (errorMessage != null && detailResponse == null) {
             Box(
@@ -181,7 +181,7 @@ fun ActivityDetailScreen(
                                 }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = RunwiseOrange)
+                        colors = ButtonDefaults.buttonColors(containerColor = AerolapBlue)
                     ) {
                         Text("Retry", color = Color.White)
                     }
@@ -293,7 +293,7 @@ fun DetailRouteMap(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("GPS ROUTE MAP", color = RunwiseOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("GPS ROUTE MAP", color = AerolapBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 if (coordinates.isNotEmpty()) {
                     Text("${coordinates.size} GPS points", color = TextSecondaryDark, fontSize = 11.sp)
                 }
@@ -333,7 +333,7 @@ fun PrimaryMetricsGrid(activity: ActivityItem) {
         border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderDark)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("PERFORMANCE METRICS", color = RunwiseOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("PERFORMANCE METRICS", color = AerolapBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 MetricTile("Avg Pace", "${activity.averagePaceFormatted} /km", Icons.Default.Timer, PaceOnTarget)
@@ -357,7 +357,7 @@ fun PrimaryMetricsGrid(activity: ActivityItem) {
                 }
 
                 if (activity.calories != null && activity.calories > 0) {
-                    MetricTile("Calories", "${activity.calories} kcal", Icons.Default.LocalFireDepartment, RunwiseOrange)
+                    MetricTile("Calories", "${activity.calories} kcal", Icons.Default.LocalFireDepartment, AerolapBlue)
                 } else {
                     MetricTile("Calories", "-- kcal", Icons.Default.LocalFireDepartment, TextMutedDark)
                 }
@@ -386,7 +386,7 @@ fun WorkoutLapsAnalysisSection(laps: List<ActivityLapItem>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("WORKOUT ANALYSIS", color = RunwiseOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("WORKOUT ANALYSIS", color = AerolapBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Text("Lap & Interval Breakdown", color = TextPrimaryDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Text("${laps.size} Laps", color = TextSecondaryDark, fontSize = 12.sp)
@@ -404,7 +404,7 @@ fun WorkoutLapsAnalysisSection(laps: List<ActivityLapItem>) {
                     ),
                     border = androidx.compose.foundation.BorderStroke(
                         width = if (isInterval) 1.5.dp else 1.dp,
-                        color = if (isInterval) RunwiseOrange else CardBorderDark
+                        color = if (isInterval) AerolapBlue else CardBorderDark
                     )
                 ) {
                     Row(
@@ -420,7 +420,7 @@ fun WorkoutLapsAnalysisSection(laps: List<ActivityLapItem>) {
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clip(CircleShape)
-                                    .background(if (isInterval) RunwiseOrange else SurfaceDark),
+                                    .background(if (isInterval) AerolapBlue else SurfaceDark),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -435,7 +435,7 @@ fun WorkoutLapsAnalysisSection(laps: List<ActivityLapItem>) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(
                                         lap.name,
-                                        color = if (isInterval) RunwiseOrange else TextPrimaryDark,
+                                        color = if (isInterval) AerolapBlue else TextPrimaryDark,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -447,7 +447,7 @@ fun WorkoutLapsAnalysisSection(laps: List<ActivityLapItem>) {
                                             fontWeight = FontWeight.Black,
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .background(RunwiseOrange)
+                                                .background(AerolapBlue)
                                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                                         )
                                     }
@@ -480,7 +480,7 @@ fun WorkoutLapsAnalysisSection(laps: List<ActivityLapItem>) {
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 "${lap.paceFormatted} /km",
-                                color = if (isInterval) RunwiseOrange else PaceOnTarget,
+                                color = if (isInterval) AerolapBlue else PaceOnTarget,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
                                 fontFamily = FontFamily.Monospace
@@ -509,7 +509,20 @@ fun KilometerSplitsSection(splits: List<ActivitySplitItem>) {
         border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderDark)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("1 KM SPLITS", color = RunwiseOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("1 KM SPLITS", color = AerolapBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+
+            // Table Column Headers
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text("SPLIT", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(52.dp))
+                Text("PACE BAR", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("AVG PACE", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(62.dp))
+                Text("TIME", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(42.dp))
+                Text("ELEV", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(34.dp))
+            }
 
             val minPace = splits.map { it.paceSecPerKm }.filter { it > 0 }.minOrNull() ?: 300
             val maxPace = splits.map { it.paceSecPerKm }.filter { it > 0 }.maxOrNull() ?: 600
@@ -613,7 +626,7 @@ fun PerformanceCurvesSection(
         border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderDark)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("PERFORMANCE CURVES", color = RunwiseOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("PERFORMANCE CURVES", color = AerolapBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
 
             // 1. Strava-grade Pace Profile in Distance Domain (Inverted Y-axis, 2nd-98th percentile clamped)
             if (hasPace) {
@@ -682,7 +695,7 @@ fun PaceDistanceChart(
             if (currentScrubDist != null && currentScrubPace != null) {
                 Text(
                     "${String.format(Locale.US, "%.2f km", currentScrubDist / 1000.0)} • ${formatPaceTime(currentScrubPace.roundToInt())} /km",
-                    color = RunwiseOrange,
+                    color = AerolapBlue,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -799,7 +812,7 @@ fun PaceDistanceChart(
                         end = Offset(sx, h - botPad),
                         strokeWidth = 1.5.dp.toPx()
                     )
-                    drawCircle(color = RunwiseOrange, radius = 5.dp.toPx(), center = Offset(sx, sy))
+                    drawCircle(color = AerolapBlue, radius = 5.dp.toPx(), center = Offset(sx, sy))
                     drawCircle(color = Color.White, radius = 5.dp.toPx(), center = Offset(sx, sy), style = Stroke(width = 2.dp.toPx()))
                 }
             }
@@ -1035,14 +1048,14 @@ fun ElevationDistanceChart(
             if (currentScrubDist != null && currentScrubElev != null) {
                 Text(
                     "${String.format(Locale.US, "%.2f km", currentScrubDist / 1000.0)} • ${String.format(Locale.US, "%.1f m", currentScrubElev)}",
-                    color = RunwiseOrange,
+                    color = AerolapBlue,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
             } else {
                 Text(
                     "+${series.elevationGainMeters.roundToInt()} m",
-                    color = RunwiseOrange,
+                    color = AerolapBlue,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1103,7 +1116,7 @@ fun ElevationDistanceChart(
                 drawPath(
                     path = fillPath,
                     brush = Brush.verticalGradient(
-                        colors = listOf(RunwiseOrange.copy(alpha = 0.40f), RunwiseOrange.copy(alpha = 0.05f)),
+                        colors = listOf(AerolapBlue.copy(alpha = 0.40f), AerolapBlue.copy(alpha = 0.05f)),
                         startY = topPad,
                         endY = h - botPad
                     )
@@ -1112,7 +1125,7 @@ fun ElevationDistanceChart(
                 // Silhouette outline stroke
                 drawPath(
                     path = path,
-                    color = RunwiseOrange,
+                    color = AerolapBlue,
                     style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
 
@@ -1128,7 +1141,7 @@ fun ElevationDistanceChart(
                         end = Offset(sx, h - botPad),
                         strokeWidth = 1.5.dp.toPx()
                     )
-                    drawCircle(color = RunwiseOrange, radius = 5.dp.toPx(), center = Offset(sx, sy))
+                    drawCircle(color = AerolapBlue, radius = 5.dp.toPx(), center = Offset(sx, sy))
                     drawCircle(color = Color.White, radius = 5.dp.toPx(), center = Offset(sx, sy), style = Stroke(width = 2.dp.toPx()))
                 }
             }
@@ -1167,17 +1180,17 @@ fun ZonesDistributionSection(
         border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderDark)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("ZONES DISTRIBUTION", color = RunwiseOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("ZONES DISTRIBUTION", color = AerolapBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
 
             if (paceZones.isNotEmpty()) {
                 Text("Pace Zones Distribution", color = TextPrimaryDark, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                val zoneColors = listOf(PaceTooSlow, PaceOnTarget, SportRun, RunwiseOrange, PaceTooFast)
+                val zoneColors = listOf(PaceTooSlow, PaceOnTarget, SportRun, AerolapBlue, PaceTooFast)
                 paceZones.forEachIndexed { idx, zone ->
                     ZoneBarItem(
                         name = zone.name,
                         percent = zone.percent,
                         seconds = zone.seconds,
-                        color = zoneColors.getOrElse(idx) { RunwiseOrange }
+                        color = zoneColors.getOrElse(idx) { AerolapBlue }
                     )
                 }
             }
@@ -1247,12 +1260,12 @@ fun ExportActionsSection(
         border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderDark)
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("EXPORT & SHARE WORKOUT", color = RunwiseOrange, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("EXPORT & SHARE WORKOUT", color = AerolapBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
                     onClick = {
-                        val appDir = java.io.File(context.getExternalFilesDir(null), "Runwise")
+                        val appDir = java.io.File(context.getExternalFilesDir(null), "Aerolap")
                         val gpxFile = java.io.File(appDir, "${activity.id}.gpx")
                         if (gpxFile.exists() || routeCoordinates.isNotEmpty()) {
                             shareLocalGpx(context, activity, routeCoordinates)
@@ -1263,7 +1276,7 @@ fun ExportActionsSection(
                     },
                     modifier = Modifier.weight(1f).height(46.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = RunwiseOrange)
+                    colors = ButtonDefaults.buttonColors(containerColor = AerolapBlue)
                 ) {
                     Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -1272,8 +1285,13 @@ fun ExportActionsSection(
 
                 Button(
                     onClick = {
-                        val fitUrl = "$serverUrl/api/mobile/activities/${activity.id}/original"
-                        shareOrOpenUrl(context, fitUrl, "Download / Share FIT File")
+                        if (activity.isPhoneRecorded || activity.id.startsWith("phone-")) {
+                            // Phone recorded activities are shared via rich GPX with telemetry
+                            shareLocalGpx(context, activity, routeCoordinates)
+                        } else {
+                            val fitUrl = "$serverUrl/api/mobile/activities/${activity.id}/original"
+                            shareOrOpenUrl(context, fitUrl, "Download / Share FIT File")
+                        }
                     },
                     modifier = Modifier.weight(1f).height(46.dp),
                     shape = RoundedCornerShape(12.dp),
@@ -1281,7 +1299,7 @@ fun ExportActionsSection(
                 ) {
                     Icon(Icons.Default.Download, contentDescription = null, tint = SportRun, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Export FIT", color = TextPrimaryDark, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(if (activity.isPhoneRecorded || activity.id.startsWith("phone-")) "Share GPX" else "Export FIT", color = TextPrimaryDark, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }
@@ -1290,19 +1308,18 @@ fun ExportActionsSection(
 
 private fun shareLocalGpx(context: Context, activity: ActivityItem, routeCoordinates: List<Pair<Double, Double>>) {
     try {
-        val appDir = java.io.File(context.getExternalFilesDir(null), "Runwise")
+        val appDir = java.io.File(context.getExternalFilesDir(null), "Aerolap")
         if (!appDir.exists()) appDir.mkdirs()
         val gpxFile = java.io.File(appDir, "${activity.id}.gpx")
-        if (!gpxFile.exists() || gpxFile.length() < 10) {
-            val xml = PolylineUtils.generateGpxXml(
-                activityName = activity.name,
-                sportType = activity.sportType,
-                startTimeIso = activity.startDateTime.replace(" ", "T") + "Z",
-                routePoints = routeCoordinates,
-                elevationMeters = activity.elevationMeters
-            )
-            gpxFile.writeText(xml)
-        }
+        val xml = PolylineUtils.generateGpxXml(
+            activityName = activity.name,
+            sportType = activity.sportType,
+            startTimeIso = activity.startDateTime.replace(" ", "T") + "Z",
+            routePoints = routeCoordinates,
+            elevationMeters = activity.elevationMeters,
+            movingTimeSeconds = activity.movingTimeSeconds
+        )
+        gpxFile.writeText(xml)
 
         val uri = androidx.core.content.FileProvider.getUriForFile(
             context,

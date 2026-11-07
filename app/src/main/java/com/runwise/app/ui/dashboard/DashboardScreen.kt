@@ -10,9 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runwise.app.data.model.*
 import com.runwise.app.data.repository.RunwiseRepository
+import com.runwise.app.ui.components.WorkoutRoutineBottomSheet
 import com.runwise.app.ui.theme.*
 import com.runwise.app.util.PlanWorkoutParser
 import java.text.SimpleDateFormat
@@ -37,11 +36,13 @@ fun DashboardScreen(
     onQuickStartActivity: (sportType: String) -> Unit,
     onNavigateToPlan: () -> Unit,
     onNavigateToTrends: () -> Unit,
-    onNavigateToCalf: () -> Unit,
+    onNavigateToCalf: (exerciseName: String) -> Unit,
     onNavigateToWorkoutBuilder: () -> Unit
 ) {
     val syncData by repository.syncData.collectAsState()
     val isSyncing by repository.isSyncing.collectAsState()
+
+    var routineSheetDay by remember { mutableStateOf<PlanDay?>(null) }
 
     val todayDateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
     val planDays = syncData?.plan?.weeks?.flatMap { it.days } ?: emptyList()
@@ -80,7 +81,8 @@ fun DashboardScreen(
                     val workout = PlanWorkoutParser.parsePlanDayToWorkout(day)
                     onStartWorkout(workout)
                 },
-                onViewExercises = onNavigateToCalf,
+                onNavigateToExercise = onNavigateToCalf,
+                onOpenRoutineSheet = { day -> routineSheetDay = day },
                 onViewFullPlan = onNavigateToPlan
             )
         }
@@ -133,10 +135,10 @@ fun DashboardScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(RunwiseOrange.copy(alpha = 0.15f)),
+                                .background(AerolapBlue.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Timer, contentDescription = null, tint = RunwiseOrange)
+                            Icon(Icons.Default.Timer, contentDescription = null, tint = AerolapBlue)
                         }
                         Column {
                             Text(
@@ -157,6 +159,21 @@ fun DashboardScreen(
             }
         }
     }
+
+    // Dedicated Routine Modal Bottom Sheet
+    val activeRoutineDay = routineSheetDay
+    if (activeRoutineDay != null) {
+        WorkoutRoutineBottomSheet(
+            dayTitle = activeRoutineDay.title,
+            dayDate = "${activeRoutineDay.dayName}, ${activeRoutineDay.date}",
+            exercises = activeRoutineDay.exercises,
+            onDismiss = { routineSheetDay = null },
+            onNavigateToCatalog = { exName ->
+                routineSheetDay = null
+                onNavigateToCalf(exName)
+            }
+        )
+    }
 }
 
 @Composable
@@ -168,8 +185,8 @@ fun HeaderSection(athleteName: String, isSyncing: Boolean, onSyncClick: () -> Un
     ) {
         Column {
             Text(
-                "Runwise Coach",
-                color = RunwiseOrange,
+                "Aerolap Coach",
+                color = AerolapBlue,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
@@ -192,7 +209,7 @@ fun HeaderSection(athleteName: String, isSyncing: Boolean, onSyncClick: () -> Un
             if (isSyncing) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = RunwiseOrange,
+                    color = AerolapBlue,
                     strokeWidth = 2.dp
                 )
             } else {
@@ -210,7 +227,8 @@ fun TodayPlanHeroCard(
     todayWorkout: PlanDay?,
     nextWorkout: PlanDay?,
     onStartTodayWorkout: (PlanDay) -> Unit,
-    onViewExercises: () -> Unit,
+    onNavigateToExercise: (String) -> Unit,
+    onOpenRoutineSheet: (PlanDay) -> Unit,
     onViewFullPlan: () -> Unit
 ) {
     val isRest = todayWorkout?.category.equals("rest", ignoreCase = true)
@@ -223,7 +241,7 @@ fun TodayPlanHeroCard(
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.5.dp,
-            color = if (isRest) CardBorderDark else RunwiseOrange
+            color = if (isRest) CardBorderDark else AerolapBlue
         )
     ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -238,11 +256,11 @@ fun TodayPlanHeroCard(
                         modifier = Modifier
                             .size(10.dp)
                             .clip(CircleShape)
-                            .background(if (isRest) TextMutedDark else RunwiseOrange)
+                            .background(if (isRest) TextMutedDark else AerolapBlue)
                     )
                     Text(
                         "TODAY'S PLANNED WORKOUT",
-                        color = if (isRest) TextSecondaryDark else RunwiseOrange,
+                        color = if (isRest) TextSecondaryDark else AerolapBlue,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
@@ -252,12 +270,12 @@ fun TodayPlanHeroCard(
                 todayWorkout?.badge?.let { badge ->
                     Text(
                         badge,
-                        color = if (isRest) TextMutedDark else RunwiseOrange,
+                        color = if (isRest) TextMutedDark else AerolapBlue,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (isRest) SurfaceDark else RunwiseOrange.copy(alpha = 0.15f))
+                            .background(if (isRest) SurfaceDark else AerolapBlue.copy(alpha = 0.15f))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
@@ -283,22 +301,41 @@ fun TodayPlanHeroCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(SurfaceDark)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text("DISTANCE", color = TextMutedDark, fontSize = 10.sp)
-                        Text(todayWorkout.distance, color = TextPrimaryDark, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text("DISTANCE", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(todayWorkout.distance, color = TextPrimaryDark, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                     }
-                    Column {
-                        Text("TARGET PACE", color = TextMutedDark, fontSize = 10.sp)
-                        Text(todayWorkout.pace, color = PaceOnTarget, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(CardBorderDark))
+
+                    Column(
+                        modifier = Modifier.weight(1.2f).padding(horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("TARGET PACE", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(todayWorkout.pace, color = PaceOnTarget, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                     }
-                    Column {
-                        Text("TARGET HR", color = TextMutedDark, fontSize = 10.sp)
-                        Text(todayWorkout.targetHr, color = SportRun, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+
+                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(CardBorderDark))
+
+                    Column(
+                        modifier = Modifier.weight(1.3f),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text("TARGET HR", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(todayWorkout.targetHr, color = AerolapBlue, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }
@@ -311,6 +348,108 @@ fun TodayPlanHeroCard(
                 lineHeight = 17.sp
             )
 
+            // Assigned Protocol / Exercises if present
+            if (todayWorkout?.exercises?.isNotEmpty() == true) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceDark.copy(alpha = 0.7f))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.FitnessCenter,
+                                contentDescription = null,
+                                tint = AerolapBlue,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                "Assigned Protocol (${todayWorkout.exercises.size}):",
+                                color = TextSecondaryDark,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(AerolapBlue.copy(alpha = 0.15f))
+                                .clickable { onOpenRoutineSheet(todayWorkout) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                if (todayWorkout.exercises.size > 1) "View Routine (${todayWorkout.exercises.size}) ↗" else "View Details ↗",
+                                color = AerolapBlue,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
+
+                    todayWorkout.exercises.forEach { ex ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(BackgroundDark.copy(alpha = 0.6f))
+                                .clickable { onNavigateToExercise(ex.name) }
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(if (ex.type.contains("Stretch", ignoreCase = true)) SportWalk else AerolapBlue)
+                                )
+                                Text(
+                                    ex.name,
+                                    color = TextPrimaryDark,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    ex.reps,
+                                    color = AerolapBlue,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    Icons.Default.ChevronRight,
+                                    contentDescription = "View exercise",
+                                    tint = TextMutedDark,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // If today is a rest day, show Next Workout preview
             if (isRest && nextWorkout != null) {
                 Box(
@@ -322,7 +461,7 @@ fun TodayPlanHeroCard(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("UP NEXT:", color = RunwiseOrange, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            Text("UP NEXT:", color = AerolapBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
                             Text("${nextWorkout.dayName}, ${nextWorkout.date}", color = TextSecondaryDark, fontSize = 11.sp)
                         }
                         Text(
@@ -336,30 +475,51 @@ fun TodayPlanHeroCard(
             }
 
             // Action Buttons
+            val isCompleted = todayWorkout?.badge?.equals("COMPLETED", ignoreCase = true) == true
             if (!isRest && todayWorkout != null) {
-                Button(
-                    onClick = { onStartTodayWorkout(todayWorkout) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = RunwiseOrange)
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("START TODAY'S WORKOUT", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                if (isCompleted) {
+                    OutlinedButton(
+                        onClick = { onStartTodayWorkout(todayWorkout) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, PaceOnTarget.copy(alpha = 0.5f)),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = PaceOnTarget.copy(alpha = 0.12f))
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PaceOnTarget, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("WORKOUT COMPLETED", color = PaceOnTarget, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                    }
+                } else {
+                    Button(
+                        onClick = { onStartTodayWorkout(todayWorkout) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AerolapBlue)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("START TODAY'S WORKOUT", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    }
                 }
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
-                        onClick = onViewExercises,
+                        onClick = { todayWorkout?.let { onOpenRoutineSheet(it) } ?: onNavigateToExercise("") },
                         modifier = Modifier.weight(1f).height(44.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimaryDark)
                     ) {
                         Icon(Icons.Default.SelfImprovement, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Recovery Exercises", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (todayWorkout?.exercises?.isNotEmpty() == true) "Protocol (${todayWorkout.exercises.size})" else "Recovery Exercises",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
                     Button(
@@ -394,7 +554,7 @@ fun QuickRecordCard(onStartSport: (String) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Default.RadioButtonChecked, contentDescription = null, tint = RunwiseOrange, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.RadioButtonChecked, contentDescription = null, tint = AerolapBlue, modifier = Modifier.size(16.dp))
                     Text(
                         "QUICK RECORD ACTIVITY",
                         color = TextSecondaryDark,

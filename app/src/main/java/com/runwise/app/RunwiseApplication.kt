@@ -3,7 +3,7 @@ package com.runwise.app
 import android.app.Application
 import com.runwise.app.data.repository.RunwiseRepository
 
-class RunwiseApplication : Application() {
+open class AerolapApplication : Application() {
 
     lateinit var repository: RunwiseRepository
         private set
@@ -15,3 +15,5 @@ class RunwiseApplication : Application() {
         repository.sync()
     }
 }
+
+class RunwiseApplication : AerolapApplication()

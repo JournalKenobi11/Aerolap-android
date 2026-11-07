@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
 import com.runwise.app.ui.theme.CardDark
-import com.runwise.app.ui.theme.RunwiseOrange
+import com.runwise.app.ui.theme.AerolapBlue
 import com.runwise.app.ui.theme.TextMutedDark
 import com.runwise.app.ui.theme.TextPrimaryDark
 
@@ -205,7 +205,7 @@ fun LeafletMapView(
             ) {
                 Text(
                     text = if (showVectorOnly) "ROUTE" else "TILES",
-                    color = if (showVectorOnly) RunwiseOrange else TextPrimaryDark,
+                    color = if (showVectorOnly) AerolapBlue else TextPrimaryDark,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -309,7 +309,7 @@ fun NativeRouteCanvas(
 
         drawPath(
             path = path,
-            color = Color(0xFFFC5200),
+            color = Color(0xFF2DB6FA),
             style = Stroke(width = 4.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
 
@@ -336,8 +336,8 @@ fun NativeRouteCanvas(
             val scrubCanvasX = (offsetX + (scrubX - minX) * scale).toFloat()
             val scrubCanvasY = (h - (offsetY + (scrubY - minY) * scale)).toFloat()
 
-            drawCircle(color = Color(0x66FC5200), radius = 12.dp.toPx(), center = Offset(scrubCanvasX, scrubCanvasY))
-            drawCircle(color = Color(0xFFFC5200), radius = 6.5.dp.toPx(), center = Offset(scrubCanvasX, scrubCanvasY))
+            drawCircle(color = Color(0x662DB6FA), radius = 12.dp.toPx(), center = Offset(scrubCanvasX, scrubCanvasY))
+            drawCircle(color = Color(0xFF2DB6FA), radius = 6.5.dp.toPx(), center = Offset(scrubCanvasX, scrubCanvasY))
             drawCircle(color = Color.White, radius = 6.5.dp.toPx(), center = Offset(scrubCanvasX, scrubCanvasY), style = Stroke(width = 2.dp.toPx()))
         }
     }
@@ -380,10 +380,10 @@ private fun buildLeafletHtml(
             .scrub-marker {
               width: 16px;
               height: 16px;
-              background: #FC5200;
+              background: #2DB6FA;
               border: 3px solid #FFFFFF;
               border-radius: 50%;
-              box-shadow: 0 0 14px rgba(252, 82, 0, 1.0);
+              box-shadow: 0 0 14px rgba(45, 182, 250, 1.0);
             }
           </style>
         </head>
@@ -403,7 +403,7 @@ private fun buildLeafletHtml(
           var scrubMarker = null;
 
           if (rawCoords && rawCoords.length > 0) {
-            polyline = L.polyline(rawCoords, { color: '#FC5200', weight: 4.5, opacity: 0.95 }).addTo(map);
+            polyline = L.polyline(rawCoords, { color: '#2DB6FA', weight: 4.5, opacity: 0.95 }).addTo(map);
             map.fitBounds(polyline.getBounds(), { padding: [25, 25] });
 
             L.circleMarker(rawCoords[0], { radius: 6.5, fillColor: '#00E676', color: '#FFFFFF', weight: 2.5, fillOpacity: 1 }).addTo(map);
@@ -423,7 +423,7 @@ private fun buildLeafletHtml(
           function appendLivePoint(lat, lng) {
             var latlng = [lat, lng];
             if (!polyline) {
-              polyline = L.polyline([latlng], { color: '#FC5200', weight: 4.5, opacity: 0.95 }).addTo(map);
+              polyline = L.polyline([latlng], { color: '#2DB6FA', weight: 4.5, opacity: 0.95 }).addTo(map);
               map.setView(latlng, 16);
             } else {
               polyline.addLatLng(latlng);

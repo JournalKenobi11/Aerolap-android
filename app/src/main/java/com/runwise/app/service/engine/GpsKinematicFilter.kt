@@ -45,7 +45,7 @@ class GpsKinematicFilter {
     companion object {
         const val MAX_ACCURACY_METERS = 150.0f
         const val MAX_KINEMATIC_ACCELERATION = 11.0 // m/s^2
-        const val MIN_DISPLACEMENT_METERS = 3.0    // meters
+        const val MIN_DISPLACEMENT_METERS = 0.5    // meters (accepts 100% of 1 Hz running & walking fixes)
     }
 
     @Synchronized

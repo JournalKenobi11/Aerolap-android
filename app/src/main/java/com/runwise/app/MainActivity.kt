@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -73,13 +75,13 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        val app = application as RunwiseApplication
+        val app = application as AerolapApplication
         val repository = app.repository
 
         requestRequiredPermissions()
 
         setContent {
-            RunwiseTheme {
+            AerolapTheme {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
@@ -115,26 +117,26 @@ class MainActivity : ComponentActivity() {
                                 tonalElevation = 8.dp
                             ) {
                                 bottomNavScreens.forEach { screen ->
-                                    val isSelected = currentRoute == screen.route
+                                    val isSelected = currentRoute?.substringBefore("?") == screen.route
                                     NavigationBarItem(
                                         icon = {
                                             Icon(
                                                 screen.icon,
                                                 contentDescription = screen.title,
-                                                tint = if (isSelected) RunwiseOrange else TextSecondaryDark
+                                                tint = if (isSelected) AerolapBlue else TextSecondaryDark
                                             )
                                         },
                                         label = {
                                             Text(
                                                 screen.title,
-                                                color = if (isSelected) RunwiseOrange else TextSecondaryDark,
+                                                color = if (isSelected) AerolapBlue else TextSecondaryDark,
                                                 fontSize = 10.sp,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                             )
                                         },
                                         selected = isSelected,
                                         onClick = {
-                                            if (currentRoute != screen.route) {
+                                            if (currentRoute?.substringBefore("?") != screen.route) {
                                                 navController.navigate(screen.route) {
                                                     popUpTo(Screen.Dashboard.route) { saveState = true }
                                                     launchSingleTop = true
@@ -180,7 +182,10 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToPlan = { navController.navigate("plan") },
                                 onNavigateToTrends = { navController.navigate(Screen.Trends.route) },
-                                onNavigateToCalf = { navController.navigate(Screen.Exercises.route) },
+                                onNavigateToCalf = { exName ->
+                                    val route = if (exName.isNotBlank()) "exercises?highlight=${android.net.Uri.encode(exName)}" else Screen.Exercises.route
+                                    navController.navigate(route)
+                                },
                                 onNavigateToWorkoutBuilder = { navController.navigate(Screen.WorkoutBuilder.route) }
                             )
                         }
@@ -192,7 +197,10 @@ class MainActivity : ComponentActivity() {
                                     startStructuredWorkout(workout, "Run")
                                     navController.navigate(Screen.ActiveRun.route)
                                 },
-                                onNavigateToExercises = { navController.navigate(Screen.Exercises.route) },
+                                onNavigateToExercises = { exName ->
+                                    val route = if (exName.isNotBlank()) "exercises?highlight=${android.net.Uri.encode(exName)}" else Screen.Exercises.route
+                                    navController.navigate(route)
+                                },
                                 onBack = { navController.popBackStack() }
                             )
                         }
@@ -216,8 +224,27 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        composable(Screen.Exercises.route) {
-                            ExercisesScreen(repository = repository)
+                        composable(
+                            route = "exercises?highlight={highlight}&targetTab={targetTab}",
+                            arguments = listOf(
+                                navArgument("highlight") {
+                                    type = NavType.StringType
+                                    nullable = true
+                                    defaultValue = null
+                                },
+                                navArgument("targetTab") {
+                                    type = NavType.IntType
+                                    defaultValue = -1
+                                }
+                            )
+                        ) { backStackEntry ->
+                            val highlight = backStackEntry.arguments?.getString("highlight")
+                            val targetTab = backStackEntry.arguments?.getInt("targetTab") ?: -1
+                            ExercisesScreen(
+                                repository = repository,
+                                initialHighlight = highlight,
+                                initialTab = if (targetTab >= 0) targetTab else null
+                            )
                         }
 
                         composable(Screen.Trends.route) {

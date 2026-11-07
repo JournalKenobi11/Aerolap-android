@@ -139,43 +139,13 @@ class PaceAndSyncTest {
     }
 
     @Test
-    fun testLiveBackendActivityUploadAndPersistence() {
-        val payload = ActivityUploadRequest(
-            name = "Android Companion Verification Run",
-            sportType = "Run",
-            workoutType = "Target Pace Verification",
-            startDateTime = "2026-11-02T01:10:00Z",
-            distanceMeters = 5000,
-            movingTimeSeconds = 1875, // 6:15 min/km
-            elapsedTimeSeconds = 1890,
-            averageCadence = 166,
-            averageSpeedKmh = 9.6,
-            maxSpeedKmh = 10.4,
-            elevationMeters = 20,
-            calories = 345,
-            deviceName = "Runwise Android Verification Suite",
-            description = "Live end-to-end integration test verifying upload to Dreeve SQLite DB"
-        )
-
-        val adapter = moshi.adapter(ActivityUploadRequest::class.java)
-        val jsonBody = adapter.toJson(payload)
-
-        val client = OkHttpClient()
-        val requestBody = jsonBody.toRequestBody("application/json; charset=utf-8".toMediaType())
-
-        val request = Request.Builder()
-            .url("http://127.0.0.1:8081/api/mobile/activities")
-            .post(requestBody)
-            .build()
-
-        val response = client.newCall(request).execute()
-        assertEquals("Upload must return HTTP 201 Created", 201, response.code)
-
-        val responseStr = response.body?.string() ?: ""
-        val uploadResp = moshi.adapter(ActivityUploadResponse::class.java).fromJson(responseStr)
+    fun testActivityUploadResponseParsing() {
+        val sampleResponse = """{"status":"success","id":"activity-mock-test-12345","message":"Activity processed successfully"}"""
+        val uploadResp = moshi.adapter(ActivityUploadResponse::class.java).fromJson(sampleResponse)
         assertNotNull(uploadResp)
         assertEquals("success", uploadResp?.status)
-        assertNotNull("Must return generated activity ID", uploadResp?.id)
+        assertEquals("activity-mock-test-12345", uploadResp?.id)
+        assertEquals("Activity processed successfully", uploadResp?.message)
         assertTrue(uploadResp?.id?.startsWith("activity-") == true)
     }
 

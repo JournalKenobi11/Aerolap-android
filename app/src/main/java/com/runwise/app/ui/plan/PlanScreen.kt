@@ -18,10 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runwise.app.data.model.*
 import com.runwise.app.data.repository.RunwiseRepository
+import com.runwise.app.ui.components.WorkoutRoutineBottomSheet
 import com.runwise.app.ui.theme.*
 import com.runwise.app.util.PlanWorkoutParser
 import java.text.SimpleDateFormat
@@ -33,11 +35,13 @@ import java.util.Locale
 fun PlanScreen(
     repository: RunwiseRepository,
     onStartWorkout: (workout: CustomWorkout) -> Unit,
-    onNavigateToExercises: () -> Unit,
+    onNavigateToExercises: (exerciseName: String) -> Unit,
     onBack: () -> Unit
 ) {
     val syncData by repository.syncData.collectAsState()
     val plan = syncData?.plan
+
+    var routineSheetDay by remember { mutableStateOf<PlanDay?>(null) }
 
     val todayDateStr = remember {
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -53,7 +57,7 @@ fun PlanScreen(
                     Column {
                         Text(
                             "RUNNING PLAN EXPLORER",
-                            color = RunwiseOrange,
+                            color = AerolapBlue,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
@@ -116,7 +120,7 @@ fun PlanScreen(
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = RunwiseOrange,
+                                    selectedContainerColor = AerolapBlue,
                                     selectedLabelColor = Color.White,
                                     containerColor = CardDark,
                                     labelColor = TextSecondaryDark
@@ -149,7 +153,7 @@ fun PlanScreen(
                                 )
                                 Text(
                                     currentWeek.dates,
-                                    color = RunwiseOrange,
+                                    color = AerolapBlue,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -182,10 +186,26 @@ fun PlanScreen(
                             val workout = PlanWorkoutParser.parsePlanDayToWorkout(day)
                             onStartWorkout(workout)
                         },
-                        onViewExercises = onNavigateToExercises
+                        onNavigateToExercise = onNavigateToExercises,
+                        onOpenRoutineSheet = { routineSheetDay = day }
                     )
                 }
             }
+        }
+
+        // Dedicated Routine Modal Bottom Sheet
+        val activeRoutineDay = routineSheetDay
+        if (activeRoutineDay != null) {
+            WorkoutRoutineBottomSheet(
+                dayTitle = activeRoutineDay.title,
+                dayDate = "${activeRoutineDay.dayName}, ${activeRoutineDay.date}",
+                exercises = activeRoutineDay.exercises,
+                onDismiss = { routineSheetDay = null },
+                onNavigateToCatalog = { exName ->
+                    routineSheetDay = null
+                    onNavigateToExercises(exName)
+                }
+            )
         }
     }
 }
@@ -195,7 +215,8 @@ fun PlanDayCard(
     day: PlanDay,
     isToday: Boolean,
     onStartWorkout: () -> Unit,
-    onViewExercises: () -> Unit
+    onNavigateToExercise: (exerciseName: String) -> Unit,
+    onOpenRoutineSheet: () -> Unit
 ) {
     val isRest = day.category.equals("rest", ignoreCase = true)
     val isRace = day.category.equals("race", ignoreCase = true)
@@ -203,7 +224,7 @@ fun PlanDayCard(
 
     val badgeColor = when {
         isRace -> Color(0xFFEF4444)
-        isWorkout -> RunwiseOrange
+        isWorkout -> AerolapBlue
         isRest -> TextMutedDark
         else -> SportRun
     }
@@ -216,7 +237,7 @@ fun PlanDayCard(
         ),
         border = androidx.compose.foundation.BorderStroke(
             width = if (isToday) 2.dp else 1.dp,
-            color = if (isToday) RunwiseOrange else CardBorderDark
+            color = if (isToday) AerolapBlue else CardBorderDark
         )
     ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -232,7 +253,7 @@ fun PlanDayCard(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(if (isToday) RunwiseOrange else SurfaceDark),
+                            .background(if (isToday) AerolapBlue else SurfaceDark),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -247,7 +268,7 @@ fun PlanDayCard(
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
                                 "${day.dayName}, ${day.date}",
-                                color = if (isToday) RunwiseOrange else TextSecondaryDark,
+                                color = if (isToday) AerolapBlue else TextSecondaryDark,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -259,7 +280,7 @@ fun PlanDayCard(
                                     fontWeight = FontWeight.Black,
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(4.dp))
-                                        .background(RunwiseOrange)
+                                        .background(AerolapBlue)
                                         .padding(horizontal = 5.dp, vertical = 1.dp)
                                 )
                             }
@@ -314,32 +335,100 @@ fun PlanDayCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(SurfaceDark.copy(alpha = 0.6f))
-                        .padding(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceDark.copy(alpha = 0.7f))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "Recommended Protocol:",
-                            color = TextSecondaryDark,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "View Details",
-                            color = RunwiseOrange,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable { onViewExercises() }
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.FitnessCenter,
+                                contentDescription = null,
+                                tint = AerolapBlue,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                "Assigned Protocol (${day.exercises.size}):",
+                                color = TextSecondaryDark,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(AerolapBlue.copy(alpha = 0.15f))
+                                .clickable { onOpenRoutineSheet() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                if (day.exercises.size > 1) "View Routine (${day.exercises.size}) ↗" else "View Details ↗",
+                                color = AerolapBlue,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
                     }
-                    day.exercises.take(2).forEach { ex ->
-                        Text("• ${ex.name} (${ex.reps})", color = TextMutedDark, fontSize = 11.sp)
+
+                    // Render each exercise as its own clickable row
+                    day.exercises.forEach { ex ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(BackgroundDark.copy(alpha = 0.6f))
+                                .clickable { onNavigateToExercise(ex.name) }
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(if (ex.type.contains("Stretch", ignoreCase = true)) SportWalk else AerolapBlue)
+                                )
+                                Text(
+                                    ex.name,
+                                    color = TextPrimaryDark,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    ex.reps,
+                                    color = AerolapBlue,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    Icons.Default.ChevronRight,
+                                    contentDescription = "View exercise",
+                                    tint = TextMutedDark,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -352,7 +441,7 @@ fun PlanDayCard(
                         .fillMaxWidth()
                         .height(44.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isToday) RunwiseOrange else SurfaceDark)
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isToday) AerolapBlue else SurfaceDark)
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, tint = if (isToday) Color.Black else TextPrimaryDark, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -365,7 +454,7 @@ fun PlanDayCard(
                 }
             } else {
                 OutlinedButton(
-                    onClick = onViewExercises,
+                    onClick = onOpenRoutineSheet,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(40.dp),
@@ -374,7 +463,11 @@ fun PlanDayCard(
                 ) {
                     Icon(Icons.Default.SelfImprovement, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("VIEW RECOVERY STRETCHES", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (day.exercises.isNotEmpty()) "START RECOVERY PROTOCOL (${day.exercises.size})" else "VIEW RECOVERY STRETCHES",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

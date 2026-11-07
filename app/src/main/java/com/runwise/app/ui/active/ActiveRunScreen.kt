@@ -163,7 +163,7 @@ fun ActiveRunScreen(
                         onValueChange = { activityNameInput = it },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = RunwiseOrange,
+                            focusedBorderColor = AerolapBlue,
                             unfocusedBorderColor = CardBorderDark,
                             focusedTextColor = TextPrimaryDark,
                             unfocusedTextColor = TextPrimaryDark
@@ -184,7 +184,7 @@ fun ActiveRunScreen(
                         context.startService(intent)
                         onFinishRun()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = RunwiseOrange)
+                    colors = ButtonDefaults.buttonColors(containerColor = AerolapBlue)
                 ) {
                     Text("Save", color = Color.White, fontWeight = FontWeight.Bold)
                 }
@@ -225,10 +225,10 @@ fun ActiveRunTopBar(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     val badgeColor = when (runState.sportType) {
-                        "Run" -> RunwiseOrange
+                        "Run" -> AerolapBlue
                         "Walk" -> SportWalk
                         "Hike" -> SportHike
-                        else -> RunwiseOrange
+                        else -> AerolapBlue
                     }
                     Text(
                         runState.sportType.uppercase(Locale.US),
@@ -242,7 +242,7 @@ fun ActiveRunTopBar(
                     )
                     Text(
                         "${runState.workoutType} • LAP ${runState.currentLapNumber}/${runState.totalLapsCount}",
-                        color = RunwiseOrange,
+                        color = AerolapBlue,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp
@@ -290,7 +290,7 @@ fun ActiveRunTopBar(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) RunwiseOrange else Color.Transparent)
+                        .background(if (isSelected) AerolapBlue else Color.Transparent)
                         .clickable { onSelectPage(index) }
                         .padding(vertical = 6.dp),
                     contentAlignment = Alignment.Center
@@ -367,7 +367,7 @@ fun ActiveRunBottomBar(
                         .weight(1f)
                         .height(54.dp),
                     shape = RoundedCornerShape(27.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = RunwiseOrange)
+                    colors = ButtonDefaults.buttonColors(containerColor = AerolapBlue)
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
                     Spacer(modifier = Modifier.width(6.dp))
@@ -520,17 +520,86 @@ fun ActiveRunHudPage(
                 )
 
                 Text(
-                    "CURRENT PACE (/KM)",
+                    "CURRENT KM PACE",
                     color = TextSecondaryDark,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
 
+                if (runState.lastSplitPaceSecPerKm > 0) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Last Km: ${runState.lastSplitPaceFormatted} /km",
+                        color = AerolapBlue,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (targetPace > 0) {
                     PaceTargetGauge(currentPace = currentPace, targetPace = targetPace)
+                }
+            }
+        }
+
+        // Current Kilometer Progress Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = CardDark),
+            border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderDark)
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "KILOMETER ${runState.currentSplitNumber} PROGRESS",
+                        color = TextSecondaryDark,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "${runState.currentSplitDistanceMeters}m / 1000m",
+                        color = TextPrimaryDark,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                val kmFraction = (runState.currentSplitDistanceMeters.toFloat() / 1000f).coerceIn(0f, 1f)
+                LinearProgressIndicator(
+                    progress = { kmFraction },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = AerolapBlue,
+                    trackColor = SurfaceDark
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Split Pace: ${formatPace(runState.currentSplitPaceSecPerKm)}/km",
+                        color = AerolapBlue,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        if (runState.lastSplitPaceSecPerKm > 0) "Prev: ${runState.lastSplitPaceFormatted}/km" else "First Kilometer",
+                        color = TextSecondaryDark,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
@@ -626,7 +695,7 @@ fun ActiveRunHudPage(
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp)),
-                    color = if (isDurationStep) SportWalk else RunwiseOrange,
+                    color = if (isDurationStep) SportWalk else AerolapBlue,
                     trackColor = SurfaceDark
                 )
 
@@ -726,11 +795,11 @@ fun ActiveRunHudPage(
                         Icon(
                             Icons.Default.FormatListNumbered,
                             contentDescription = null,
-                            tint = RunwiseOrange,
+                            tint = AerolapBlue,
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            "LAPS & SPLITS",
+                            "1 KM SPLITS",
                             color = TextSecondaryDark,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -743,7 +812,7 @@ fun ActiveRunHudPage(
                     ) {
                         Text(
                             "Full Screen →",
-                            color = RunwiseOrange,
+                            color = AerolapBlue,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -752,11 +821,11 @@ fun ActiveRunHudPage(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                StravaLapsTable(
-                    completedLaps = runState.completedLaps,
-                    currentLapNumber = runState.currentLapNumber,
-                    currentLapDistanceMeters = runState.lapDistanceMeters,
-                    currentLapPaceSecPerKm = runState.lapPaceSecPerKm
+                StravaSplitsTable(
+                    completedSplits = runState.completedSplits,
+                    currentSplitNumber = runState.currentSplitNumber,
+                    currentSplitDistanceMeters = runState.currentSplitDistanceMeters,
+                    currentSplitPaceSecPerKm = runState.currentSplitPaceSecPerKm
                 )
             }
         }
@@ -847,6 +916,8 @@ fun ActiveRunMapPage(
 fun StravaLapsScreen(
     runState: RunState
 ) {
+    var selectedTab by remember { mutableStateOf(0) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -875,7 +946,7 @@ fun StravaLapsScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "Laps",
+                        if (selectedTab == 0) "1 KM Splits" else "Laps",
                         color = Color(0xFF0F1115),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Black
@@ -908,7 +979,7 @@ fun StravaLapsScreen(
                         )
                     }
                     Text(
-                        "Laps",
+                        if (selectedTab == 0) "1 KM Splits" else "Laps",
                         color = TextPrimaryDark,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold
@@ -916,7 +987,7 @@ fun StravaLapsScreen(
                 }
 
                 Text(
-                    "${runState.completedLaps.size + 1} Splits",
+                    if (selectedTab == 0) "${runState.completedSplits.size + 1} Splits" else "${runState.completedLaps.size + 1} Laps",
                     color = TextSecondaryDark,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
@@ -924,7 +995,51 @@ fun StravaLapsScreen(
             }
         }
 
-        // Dedicated Strava Laps Table
+        // Tab Selector Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(SurfaceDark)
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (selectedTab == 0) CardDark else Color.Transparent)
+                    .clickable { selectedTab = 0 }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "1 KM SPLITS (${runState.completedSplits.size + 1})",
+                    color = if (selectedTab == 0) TextPrimaryDark else TextSecondaryDark,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (selectedTab == 1) CardDark else Color.Transparent)
+                    .clickable { selectedTab = 1 }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "WORKOUT LAPS (${runState.completedLaps.size + 1})",
+                    color = if (selectedTab == 1) TextPrimaryDark else TextSecondaryDark,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Dedicated Table Container
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -932,22 +1047,42 @@ fun StravaLapsScreen(
             border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderDark)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                StravaLapsTable(
-                    completedLaps = runState.completedLaps,
-                    currentLapNumber = runState.currentLapNumber,
-                    currentLapDistanceMeters = runState.lapDistanceMeters,
-                    currentLapPaceSecPerKm = runState.lapPaceSecPerKm
-                )
-
-                if (runState.completedLaps.isEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Lap 1 in progress. Completed splits are recorded after each 500m or structured workout step.",
-                        color = TextMutedDark,
-                        fontSize = 12.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                if (selectedTab == 0) {
+                    StravaSplitsTable(
+                        completedSplits = runState.completedSplits,
+                        currentSplitNumber = runState.currentSplitNumber,
+                        currentSplitDistanceMeters = runState.currentSplitDistanceMeters,
+                        currentSplitPaceSecPerKm = runState.currentSplitPaceSecPerKm
                     )
+
+                    if (runState.completedSplits.isEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Kilometer 1 in progress. 1 km splits record automatically at each 1,000m mark.",
+                            color = TextMutedDark,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                } else {
+                    StravaLapsTable(
+                        completedLaps = runState.completedLaps,
+                        currentLapNumber = runState.currentLapNumber,
+                        currentLapDistanceMeters = runState.lapDistanceMeters,
+                        currentLapPaceSecPerKm = runState.lapPaceSecPerKm
+                    )
+
+                    if (runState.completedLaps.isEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Lap 1 in progress. Completed laps are recorded after each structured workout step.",
+                            color = TextMutedDark,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
@@ -957,8 +1092,79 @@ fun StravaLapsScreen(
 }
 
 // ----------------------------------------------------
-// REUSABLE STRAVA LAPS TABLE & HORIZONTAL BAR ROWS
+// REUSABLE STRAVA SPLITS & LAPS TABLES
 // ----------------------------------------------------
+
+@Composable
+fun StravaSplitsTable(
+    completedSplits: List<com.runwise.app.data.model.ActivitySplitItem>,
+    currentSplitNumber: Int,
+    currentSplitDistanceMeters: Int,
+    currentSplitPaceSecPerKm: Int,
+    modifier: Modifier = Modifier
+) {
+    val allPaces = (completedSplits.map { it.paceSecPerKm } + listOf(currentSplitPaceSecPerKm)).filter { it > 0 }
+    val maxSpeed = if (allPaces.isNotEmpty()) {
+        allPaces.maxOf { 1000f / it }
+    } else {
+        3.5f
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Km",
+                color = TextSecondaryDark,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.width(38.dp)
+            )
+            Text(
+                text = "Dist",
+                color = TextSecondaryDark,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.width(54.dp)
+            )
+            Text(
+                text = "Pace",
+                color = TextSecondaryDark,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        HorizontalDivider(color = CardBorderDark, thickness = 0.8.dp)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        completedSplits.forEach { split ->
+            StravaLapRow(
+                lapNumber = split.splitNumber,
+                distanceMeters = split.distanceMeters,
+                paceSecPerKm = split.paceSecPerKm,
+                paceFormatted = split.paceFormatted,
+                maxSpeed = maxSpeed,
+                isActive = false
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        StravaLapRow(
+            lapNumber = currentSplitNumber,
+            distanceMeters = currentSplitDistanceMeters,
+            paceSecPerKm = currentSplitPaceSecPerKm,
+            paceFormatted = if (currentSplitPaceSecPerKm > 0) formatPace(currentSplitPaceSecPerKm) else "--:--",
+            maxSpeed = maxSpeed,
+            isActive = true
+        )
+    }
+}
 
 @Composable
 fun StravaLapsTable(
@@ -1107,7 +1313,7 @@ fun StravaLapRow(
                             .width(4.dp)
                             .height(26.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(RunwiseOrange)
+                            .background(AerolapBlue)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                 }
@@ -1199,10 +1405,10 @@ fun PreStartGpsView(
             modifier = Modifier.padding(top = 40.dp)
         ) {
             val badgeColor = when (runState.sportType) {
-                "Run" -> RunwiseOrange
+                "Run" -> AerolapBlue
                 "Walk" -> SportWalk
                 "Hike" -> SportHike
-                else -> RunwiseOrange
+                else -> AerolapBlue
             }
 
             Text(
@@ -1295,7 +1501,7 @@ fun PreStartGpsView(
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isLocked) PaceOnTarget else RunwiseOrange
+                    containerColor = if (isLocked) PaceOnTarget else AerolapBlue
                 )
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
@@ -1348,7 +1554,7 @@ fun LiveRouteMap(
                     Icon(
                         Icons.Default.Place,
                         contentDescription = null,
-                        tint = RunwiseOrange,
+                        tint = AerolapBlue,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(

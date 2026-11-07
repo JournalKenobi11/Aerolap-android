@@ -14,11 +14,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:name=".RunwiseApplication"
+        android:name=".AerolapApplication"
         android:allowBackup="true"
-        android:icon="@android:drawable/ic_dialog_map"
-        android:label="Runwise"
-        android:roundIcon="@android:drawable/ic_dialog_map"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Aerolap"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:usesCleartextTraffic="true"
@@ -27,7 +27,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="Runwise"
+            android:label="Aerolap"
             android:launchMode="singleTop"
             android:showWhenLocked="true"
             android:turnScreenOn="true"

@@ -133,7 +133,7 @@ class StravaEngineSubsystemsTest {
     fun testGpsKinematicFilterDisplacementAndAnchorRetention() {
         val filter = GpsKinematicFilter()
 
-        // Mock 3 points: anchor, small displacement (<3m), and valid displacement (>=3m)
+        // Mock 3 points: anchor, small displacement (<0.5m), and valid displacement (>=0.5m)
         val p0 = Mockito.mock(Location::class.java)
         Mockito.`when`(p0.latitude).thenReturn(12.971600)
         Mockito.`when`(p0.longitude).thenReturn(77.594600)
@@ -145,26 +145,26 @@ class StravaEngineSubsystemsTest {
         Mockito.`when`(p1Small.longitude).thenReturn(77.594610)
         Mockito.`when`(p1Small.accuracy).thenReturn(5.0f)
         Mockito.`when`(p1Small.hasAccuracy()).thenReturn(true)
-        Mockito.`when`(p0.distanceTo(p1Small)).thenReturn(1.5f) // 1.5m displacement (< 3m)
+        Mockito.`when`(p0.distanceTo(p1Small)).thenReturn(0.2f) // 0.2m displacement (< 0.5m)
 
         val p2Large = Mockito.mock(Location::class.java)
         Mockito.`when`(p2Large.latitude).thenReturn(12.971650)
         Mockito.`when`(p2Large.longitude).thenReturn(77.594650)
         Mockito.`when`(p2Large.accuracy).thenReturn(5.0f)
         Mockito.`when`(p2Large.hasAccuracy()).thenReturn(true)
-        Mockito.`when`(p0.distanceTo(p2Large)).thenReturn(4.2f) // 4.2m displacement from anchor p0 (>= 3m)
+        Mockito.`when`(p0.distanceTo(p2Large)).thenReturn(1.5f) // 1.5m displacement from anchor p0 (>= 0.5m)
 
         // 1. Initial point accepted as anchor
         val r0 = filter.filter(p0, 1000L)
         assertEquals(FilterReason.ACCEPTED, r0.reason)
         assertEquals(p0, filter.getLastAcceptedPoint()?.location)
 
-        // 2. Small 1.5m movement is dropped, anchor remains p0
+        // 2. Small 0.2m movement is dropped, anchor remains p0
         val r1 = filter.filter(p1Small, 2000L)
         assertEquals(FilterReason.INSUFFICIENT_DISPLACEMENT, r1.reason)
         assertEquals(p0, filter.getLastAcceptedPoint()?.location) // Anchor RETAINED!
 
-        // 3. Movement >= 3m from anchor is accepted, anchor advances to p2
+        // 3. Movement >= 0.5m from anchor is accepted, anchor advances to p2
         val r2 = filter.filter(p2Large, 3000L)
         assertEquals(FilterReason.ACCEPTED, r2.reason)
         assertEquals(p2Large, filter.getLastAcceptedPoint()?.location) // Anchor ADVANCED!

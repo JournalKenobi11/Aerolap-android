@@ -137,7 +137,8 @@ class RunwiseRepository private constructor(private val context: Context) {
         customName: String? = null,
         completedLaps: List<com.runwise.app.service.LapSnapshot> = emptyList(),
         streams: ActivityStreamsData = ActivityStreamsData(),
-        kmSplits: List<ActivitySplitItem> = emptyList()
+        kmSplits: List<ActivitySplitItem> = emptyList(),
+        trackPoints: List<com.runwise.app.util.GpsTrackPoint> = emptyList()
     ): String {
         val id = "phone-" + UUID.randomUUID().toString()
         val now = Date()
@@ -173,7 +174,7 @@ class RunwiseRepository private constructor(private val context: Context) {
             elevationMeters = elevationGainMeters,
             calories = calories,
             encodedPolyline = encodedPoly,
-            deviceName = "Runwise Phone Recording",
+            deviceName = "Aerolap Phone Recording",
             isPhoneRecorded = true
         )
 
@@ -266,14 +267,24 @@ class RunwiseRepository private constructor(private val context: Context) {
             }
         }
 
-        // Generate and save standalone GPX file
-        val gpxXml = PolylineUtils.generateGpxXml(
-            activityName = activityName,
-            sportType = sportType,
-            startTimeIso = nowIso,
-            routePoints = routePoints,
-            elevationMeters = elevationGainMeters
-        )
+        // Generate and save standalone GPX file with authentic timestamps and extensions
+        val gpxXml = if (trackPoints.isNotEmpty()) {
+            PolylineUtils.generateRichGpxXml(
+                activityName = activityName,
+                sportType = sportType,
+                startTimeIso = nowIso,
+                trackPoints = trackPoints
+            )
+        } else {
+            PolylineUtils.generateGpxXml(
+                activityName = activityName,
+                sportType = sportType,
+                startTimeIso = nowIso,
+                routePoints = routePoints,
+                elevationMeters = elevationGainMeters,
+                movingTimeSeconds = movingTimeSeconds
+            )
+        }
         saveGpxFile(id, activityName, gpxXml)
 
         // Append to local activities and persist
@@ -300,14 +311,14 @@ class RunwiseRepository private constructor(private val context: Context) {
 
     fun saveGpxFile(activityId: String, activityName: String, gpxXml: String) {
         try {
-            val appDir = File(context.getExternalFilesDir(null), "Runwise")
+            val appDir = File(context.getExternalFilesDir(null), "Aerolap")
             if (!appDir.exists()) appDir.mkdirs()
             File(appDir, "$activityId.gpx").writeText(gpxXml)
         } catch (_: Exception) {}
 
         try {
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val publicDir = File(downloadsDir, "Runwise")
+            val publicDir = File(downloadsDir, "Aerolap")
             if (!publicDir.exists()) publicDir.mkdirs()
             val safeName = activityName.replace("[^a-zA-Z0-9_.-]".toRegex(), "_")
             File(publicDir, "$safeName.gpx").writeText(gpxXml)
@@ -466,7 +477,7 @@ class RunwiseRepository private constructor(private val context: Context) {
             detailMemoryCache.remove(activityId)
             try {
                 File(context.cacheDir, "activity_detail_$activityId.json").delete()
-                File(context.getExternalFilesDir(null), "Runwise/$activityId.gpx").delete()
+                File(context.getExternalFilesDir(null), "Aerolap/$activityId.gpx").delete()
             } catch (_: Exception) {}
             return@withContext true
         }
@@ -519,10 +530,14 @@ class RunwiseRepository private constructor(private val context: Context) {
     private fun loadSavedWorkouts() {
         try {
             val json = prefs.getString(PREF_SAVED_WORKOUTS, null)
+            val defaultTemplates = createDefaultTemplates()
             if (!json.isNullOrBlank()) {
                 val list = workoutListAdapter.fromJson(json)
                 if (!list.isNullOrEmpty()) {
-                    _customWorkouts.value = list
+                    val customOnly = list.filter { !it.isPreset }
+                    val merged = defaultTemplates + customOnly
+                    _customWorkouts.value = merged
+                    persistWorkouts(merged)
                     return
                 }
             }
@@ -555,7 +570,7 @@ class RunwiseRepository private constructor(private val context: Context) {
                         stepType = StepType.WARMUP,
                         targetType = TargetType.DISTANCE,
                         targetDistanceMeters = 1000,
-                        targetPaceSecPerKm = 420, // 7:00 pace
+                        targetPaceSecPerKm = 0, // Free / open pace
                         targetCadenceSpm = 162
                     ),
                     WorkoutStep(
@@ -571,7 +586,7 @@ class RunwiseRepository private constructor(private val context: Context) {
                         stepType = StepType.COOLDOWN,
                         targetType = TargetType.DISTANCE,
                         targetDistanceMeters = 1000,
-                        targetPaceSecPerKm = 435, // 7:15 pace
+                        targetPaceSecPerKm = 0, // Free / open pace
                         targetCadenceSpm = 160
                     )
                 )
@@ -582,15 +597,15 @@ class RunwiseRepository private constructor(private val context: Context) {
                 description = "Teaches neuromuscular cadence and pacing memory. 1km repeats @ 6:15 with 400m recovery.",
                 isPreset = true,
                 steps = listOf(
-                    WorkoutStep(title = "Warm Up", stepType = StepType.WARMUP, targetDistanceMeters = 1000, targetPaceSecPerKm = 420),
+                    WorkoutStep(title = "Warm Up", stepType = StepType.WARMUP, targetDistanceMeters = 1000, targetPaceSecPerKm = 0),
                     WorkoutStep(title = "Interval 1", stepType = StepType.INTERVAL, targetDistanceMeters = 1000, targetPaceSecPerKm = 375),
-                    WorkoutStep(title = "Recovery 1", stepType = StepType.RECOVERY, targetDistanceMeters = 400, targetPaceSecPerKm = 450),
+                    WorkoutStep(title = "Recovery 1", stepType = StepType.RECOVERY, targetDistanceMeters = 400, targetPaceSecPerKm = 0),
                     WorkoutStep(title = "Interval 2", stepType = StepType.INTERVAL, targetDistanceMeters = 1000, targetPaceSecPerKm = 375),
-                    WorkoutStep(title = "Recovery 2", stepType = StepType.RECOVERY, targetDistanceMeters = 400, targetPaceSecPerKm = 450),
+                    WorkoutStep(title = "Recovery 2", stepType = StepType.RECOVERY, targetDistanceMeters = 400, targetPaceSecPerKm = 0),
                     WorkoutStep(title = "Interval 3", stepType = StepType.INTERVAL, targetDistanceMeters = 1000, targetPaceSecPerKm = 375),
-                    WorkoutStep(title = "Recovery 3", stepType = StepType.RECOVERY, targetDistanceMeters = 400, targetPaceSecPerKm = 450),
+                    WorkoutStep(title = "Recovery 3", stepType = StepType.RECOVERY, targetDistanceMeters = 400, targetPaceSecPerKm = 0),
                     WorkoutStep(title = "Interval 4", stepType = StepType.INTERVAL, targetDistanceMeters = 1000, targetPaceSecPerKm = 375),
-                    WorkoutStep(title = "Cool Down", stepType = StepType.COOLDOWN, targetDistanceMeters = 1000, targetPaceSecPerKm = 435)
+                    WorkoutStep(title = "Cool Down", stepType = StepType.COOLDOWN, targetDistanceMeters = 1000, targetPaceSecPerKm = 0)
                 )
             ),
             CustomWorkout(
@@ -636,7 +651,7 @@ class RunwiseRepository private constructor(private val context: Context) {
                         val detail = detailAdapter.fromJson(cacheFile.readText())
                         if (detail != null) {
                             recoveredItem = detail.activity.copy(
-                                deviceName = "Runwise Phone Recording",
+                                deviceName = "Aerolap Phone Recording",
                                 isPhoneRecorded = true
                             )
                         }
@@ -661,7 +676,7 @@ class RunwiseRepository private constructor(private val context: Context) {
                         elevationMeters = 0,
                         calories = 0,
                         encodedPolyline = "{hjyBucyzL@?",
-                        deviceName = "Runwise Phone Recording",
+                        deviceName = "Aerolap Phone Recording",
                         isPhoneRecorded = true
                     )
                 }

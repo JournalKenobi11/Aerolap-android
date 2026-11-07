@@ -216,7 +216,7 @@ data class ActivityUploadRequest(
     val maxSpeedKmh: Double = 0.0,
     val elevationMeters: Int = 0,
     val calories: Int = 0,
-    val deviceName: String = "Runwise Android",
+    val deviceName: String = "Aerolap Android",
     val polyline: String? = null,
     val description: String? = null
 )

@@ -58,7 +58,7 @@ fun WorkoutBuilderScreen(
             Column {
                 Text(
                     "STRUCTURED WORKOUTS",
-                    color = RunwiseOrange,
+                    color = AerolapBlue,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
@@ -84,7 +84,7 @@ fun WorkoutBuilderScreen(
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = if (isBuilderOpen) SurfaceDark else RunwiseOrange)
+                colors = ButtonDefaults.buttonColors(containerColor = if (isBuilderOpen) SurfaceDark else AerolapBlue)
             ) {
                 Icon(
                     if (isBuilderOpen) Icons.Default.Close else Icons.Default.Add,
@@ -93,7 +93,7 @@ fun WorkoutBuilderScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    if (isBuilderOpen) "CLOSE BUILDER" else "+ BUILD CUSTOM WORKOUT",
+                    if (isBuilderOpen) "CLOSE BUILDER" else "BUILD CUSTOM WORKOUT",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -107,12 +107,12 @@ fun WorkoutBuilderScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = CardDark),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, RunwiseOrange)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AerolapBlue)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             "CREATE WORKOUT & SET LAPS",
-                            color = RunwiseOrange,
+                            color = AerolapBlue,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -125,7 +125,7 @@ fun WorkoutBuilderScreen(
                             label = { Text("Workout Name (e.g. 5x800m Pacing)") },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = RunwiseOrange,
+                                focusedBorderColor = AerolapBlue,
                                 unfocusedBorderColor = CardBorderDark,
                                 focusedTextColor = TextPrimaryDark,
                                 unfocusedTextColor = TextPrimaryDark
@@ -256,7 +256,7 @@ fun WorkoutBuilderScreen(
                                 },
                                 modifier = Modifier.weight(1f).height(48.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = RunwiseOrange)
+                                colors = ButtonDefaults.buttonColors(containerColor = AerolapBlue)
                             ) {
                                 Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -374,7 +374,7 @@ fun StepEditorCard(
                     label = { Text("Dist (m)", fontSize = 10.sp) },
                     modifier = Modifier.weight(1f),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = RunwiseOrange,
+                        focusedBorderColor = AerolapBlue,
                         unfocusedBorderColor = CardBorderDark,
                         focusedTextColor = TextPrimaryDark,
                         unfocusedTextColor = TextPrimaryDark
@@ -393,7 +393,7 @@ fun StepEditorCard(
                     label = { Text("Min/km", fontSize = 10.sp) },
                     modifier = Modifier.weight(0.8f),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = RunwiseOrange,
+                        focusedBorderColor = AerolapBlue,
                         unfocusedBorderColor = CardBorderDark,
                         focusedTextColor = TextPrimaryDark,
                         unfocusedTextColor = TextPrimaryDark
@@ -414,7 +414,7 @@ fun StepEditorCard(
                     label = { Text("Sec", fontSize = 10.sp) },
                     modifier = Modifier.weight(0.8f),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = RunwiseOrange,
+                        focusedBorderColor = AerolapBlue,
                         unfocusedBorderColor = CardBorderDark,
                         focusedTextColor = TextPrimaryDark,
                         unfocusedTextColor = TextPrimaryDark
@@ -451,16 +451,16 @@ fun WorkoutCard(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(RunwiseOrange.copy(alpha = 0.15f)),
+                            .background(AerolapBlue.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Speed, contentDescription = null, tint = RunwiseOrange, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Speed, contentDescription = null, tint = AerolapBlue, modifier = Modifier.size(20.dp))
                     }
                     Column {
                         Text(workout.name, color = TextPrimaryDark, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Text(
                             "${workout.steps.size} Laps • ${workout.formattedTotalDistance}",
-                            color = RunwiseOrange,
+                            color = AerolapBlue,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -493,22 +493,37 @@ fun WorkoutCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
                                     .clip(CircleShape)
                                     .background(Color(step.stepType.badgeColorHex))
                             )
-                            Text("Lap ${i + 1}: ${step.title}", color = TextPrimaryDark, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Lap ${i + 1}: ${step.title}",
+                                color = TextPrimaryDark,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(step.targetDescription, color = TextSecondaryDark, fontSize = 12.sp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(step.targetDescription, color = TextSecondaryDark, fontSize = 11.sp)
+                            val paceText = if (step.targetPaceSecPerKm > 0) "Target: ${step.formattedPace}/km" else "Free Pace"
                             Text(
-                                "Target: ${step.formattedPace}/km",
+                                paceText,
                                 color = Color(step.stepType.badgeColorHex),
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -524,7 +539,7 @@ fun WorkoutCard(
                     .fillMaxWidth()
                     .height(44.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = RunwiseOrange)
+                colors = ButtonDefaults.buttonColors(containerColor = AerolapBlue)
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))

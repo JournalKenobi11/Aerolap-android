@@ -47,7 +47,7 @@ fun TrendsScreen(repository: RunwiseRepository) {
         item {
             Text(
                 "TRAINING TRENDS & METRICS",
-                color = RunwiseOrange,
+                color = AerolapBlue,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
@@ -301,6 +301,8 @@ fun WeeklyTrendCard(week: WeeklyTrend) {
 
 @Composable
 fun FitnessFatigueChartCard(history: List<TrainingLoadPoint>) {
+    val latest = history.lastOrNull()
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -314,7 +316,7 @@ fun FitnessFatigueChartCard(history: List<TrainingLoadPoint>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "TRAINING LOAD CURVE (90 DAYS)",
+                    "TRAINING LOAD CURVE (60 DAYS)",
                     color = TextSecondaryDark,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
@@ -327,63 +329,104 @@ fun FitnessFatigueChartCard(history: List<TrainingLoadPoint>) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            if (latest != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("CTL: ${latest.ctl.toInt()}", color = FitnessCtl, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("ATL: ${latest.atl.toInt()}", color = FatigueAtl, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                    val tsbPrefix = if (latest.tsb > 0) "+" else ""
+                    Text("TSB: $tsbPrefix${latest.tsb}", color = FormTsb, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             if (history.isNotEmpty()) {
-                Canvas(
+                val points = history.takeLast(60)
+                val maxVal = points.maxOf { maxOf(it.ctl, it.atl, it.tsb.toDouble()) }.coerceAtLeast(35.0)
+                val minVal = points.minOf { minOf(it.ctl, it.atl, it.tsb.toDouble()) }.coerceAtMost(-20.0)
+                val range = (maxVal - minVal).coerceAtLeast(10.0)
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    // Y-axis labels
+                    Column(
+                        modifier = Modifier
+                            .height(140.dp)
+                            .padding(end = 6.dp),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text("+${maxVal.toInt()}", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("0", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("${minVal.toInt()}", color = TextMutedDark, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Canvas(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(140.dp)
+                    ) {
+                        val width = size.width
+                        val height = size.height
+
+                        if (points.size < 2) return@Canvas
+
+                        fun getY(v: Double): Float {
+                            return (height - ((v - minVal) / range * height)).toFloat()
+                        }
+
+                        // Zero baseline for TSB
+                        val zeroY = getY(0.0)
+                        drawLine(
+                            color = CardBorderDark,
+                            start = Offset(0f, zeroY),
+                            end = Offset(width, zeroY),
+                            strokeWidth = 1.dp.toPx()
+                        )
+
+                        val stepX = width / (points.size - 1)
+
+                        val ctlPath = Path()
+                        val atlPath = Path()
+                        val tsbPath = Path()
+
+                        points.forEachIndexed { i, p ->
+                            val x = i * stepX
+                            val yCtl = getY(p.ctl)
+                            val yAtl = getY(p.atl)
+                            val yTsb = getY(p.tsb)
+
+                            if (i == 0) {
+                                ctlPath.moveTo(x, yCtl)
+                                atlPath.moveTo(x, yAtl)
+                                tsbPath.moveTo(x, yTsb)
+                            } else {
+                                ctlPath.lineTo(x, yCtl)
+                                atlPath.lineTo(x, yAtl)
+                                tsbPath.lineTo(x, yTsb)
+                            }
+                        }
+
+                        drawPath(atlPath, FatigueAtl, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
+                        drawPath(ctlPath, FitnessCtl, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
+                        drawPath(tsbPath, FormTsb, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
+                    }
+                }
+
+                // X-axis time labels
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp)
+                        .padding(start = 28.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val width = size.width
-                    val height = size.height
-
-                    val points = history.takeLast(60)
-                    if (points.size < 2) return@Canvas
-
-                    val maxVal = points.maxOf { maxOf(it.ctl, it.atl, it.tsb.toDouble()) }.coerceAtLeast(35.0)
-                    val minVal = points.minOf { minOf(it.ctl, it.atl, it.tsb.toDouble()) }.coerceAtMost(-20.0)
-                    val range = (maxVal - minVal).coerceAtLeast(10.0)
-
-                    fun getY(v: Double): Float {
-                        return (height - ((v - minVal) / range * height)).toFloat()
-                    }
-
-                    // Zero baseline for TSB
-                    val zeroY = getY(0.0)
-                    drawLine(
-                        color = CardBorderDark,
-                        start = Offset(0f, zeroY),
-                        end = Offset(width, zeroY),
-                        strokeWidth = 1.dp.toPx()
-                    )
-
-                    val stepX = width / (points.size - 1)
-
-                    val ctlPath = Path()
-                    val atlPath = Path()
-                    val tsbPath = Path()
-
-                    points.forEachIndexed { i, p ->
-                        val x = i * stepX
-                        val yCtl = getY(p.ctl)
-                        val yAtl = getY(p.atl)
-                        val yTsb = getY(p.tsb)
-
-                        if (i == 0) {
-                            ctlPath.moveTo(x, yCtl)
-                            atlPath.moveTo(x, yAtl)
-                            tsbPath.moveTo(x, yTsb)
-                        } else {
-                            ctlPath.lineTo(x, yCtl)
-                            atlPath.lineTo(x, yAtl)
-                            tsbPath.lineTo(x, yTsb)
-                        }
-                    }
-
-                    drawPath(atlPath, FatigueAtl, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
-                    drawPath(ctlPath, FitnessCtl, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
-                    drawPath(tsbPath, FormTsb, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
+                    Text("60d ago", color = TextMutedDark, fontSize = 9.sp)
+                    Text("30d ago", color = TextMutedDark, fontSize = 9.sp)
+                    Text("Today", color = TextMutedDark, fontSize = 9.sp)
                 }
             } else {
                 Box(

@@ -96,7 +96,13 @@ data class RunState(
     val sportType: String = "Run",
     val routePoints: List<Pair<Double, Double>> = emptyList(),
     val workoutType: String = "Run Workout",
-    val completedLaps: List<LapSnapshot> = emptyList()
+    val completedLaps: List<LapSnapshot> = emptyList(),
+    val currentSplitNumber: Int = 1,
+    val currentSplitDistanceMeters: Int = 0,
+    val currentSplitPaceSecPerKm: Int = 0,
+    val lastSplitPaceSecPerKm: Int = 0,
+    val lastSplitPaceFormatted: String = "-",
+    val completedSplits: List<com.runwise.app.data.model.ActivitySplitItem> = emptyList()
 )
 
 class TrackingService : Service(), AutoPauseListener {
@@ -148,6 +154,9 @@ class TrackingService : Service(), AutoPauseListener {
     private var lastResumeTimestamp = 0L
     private var lastStepStartTimestamp = 0L
     private val kmSplitsList = mutableListOf<com.runwise.app.data.model.ActivitySplitItem>()
+    private val richTrackPoints = mutableListOf<com.runwise.app.util.GpsTrackPoint>()
+    private var splitCadenceSamples = 0
+    private var splitCadenceSum = 0L
 
     // 5-second split massaging buffer (MIN_SPLIT_PACE_TIME_MS = 5000L)
     private var lastCompletedSplitPaceSec = 0
@@ -195,7 +204,7 @@ class TrackingService : Service(), AutoPauseListener {
         repository = RunwiseRepository.getInstance(this)
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Runwise::TrackingWakeLock")
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Aerolap::TrackingWakeLock")
 
         createNotificationChannel()
     }
@@ -310,6 +319,12 @@ class TrackingService : Service(), AutoPauseListener {
         elevationCurveStream.clear()
         distanceCurveStream.clear()
         kmSplitsList.clear()
+        richTrackPoints.clear()
+        splitCadenceSamples = 0
+        splitCadenceSum = 0L
+        richTrackPoints.clear()
+        splitCadenceSamples = 0
+        splitCadenceSum = 0L
 
         hardwareSpeedCache.clear()
         gpsKinematicFilter.reset()
@@ -391,6 +406,9 @@ class TrackingService : Service(), AutoPauseListener {
         currentSportType = sportType
         completedLaps.clear()
         kmSplitsList.clear()
+        richTrackPoints.clear()
+        splitCadenceSamples = 0
+        splitCadenceSum = 0L
         paceCurveStream.clear()
         cadenceCurveStream.clear()
         elevationCurveStream.clear()
@@ -768,7 +786,8 @@ class TrackingService : Service(), AutoPauseListener {
                 customName = customName,
                 completedLaps = lapsToSave,
                 streams = streamsToSave,
-                kmSplits = kmSplitsToSave
+                kmSplits = kmSplitsToSave,
+                trackPoints = richTrackPoints.toList()
             )
         }
 
@@ -952,7 +971,17 @@ class TrackingService : Service(), AutoPauseListener {
                 val splitSpeedKmh = if (kmTimeSec > 0) (kmDist / kmTimeSec) * 3.6 else 0.0
 
                 completedKmCount++
-                audioCoach.announceKilometerMilestone(completedKmCount, splitPace, totalElapsedSec, avgPace)
+                val splitAvgCadence = if (splitCadenceSamples > 0) (splitCadenceSum / splitCadenceSamples).toInt() else null
+                audioCoach.announceKilometerMilestone(
+                    kmNumber = completedKmCount,
+                    splitPaceSecPerKm = splitPace,
+                    totalElapsedSeconds = totalElapsedSec,
+                    avgPaceSecPerKm = avgPace,
+                    splitCadenceSpm = splitAvgCadence,
+                    targetPaceSecPerKm = _runState.value.targetPaceSecPerKm
+                )
+                splitCadenceSamples = 0
+                splitCadenceSum = 0L
 
                 // 5-second split massaging anchor (MIN_SPLIT_PACE_TIME_MS = 5000L)
                 lastCompletedSplitPaceSec = splitPace
@@ -1016,6 +1045,22 @@ class TrackingService : Service(), AutoPauseListener {
 
         val currentRoute = _runState.value.routePoints.toMutableList()
         currentRoute.add(Pair(location.latitude, location.longitude))
+
+        val ptIso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }.format(java.util.Date(if (location.time > 0) location.time else System.currentTimeMillis()))
+
+        richTrackPoints.add(
+            com.runwise.app.util.GpsTrackPoint(
+                lat = location.latitude,
+                lon = location.longitude,
+                ele = lastAltitude ?: (if (location.hasAltitude()) location.altitude else 0.0),
+                timestampIso = ptIso,
+                cadence = if (cadenceTracker.currentCadenceSpm.value > 0) cadenceTracker.currentCadenceSpm.value else null,
+                speedMps = if (location.hasSpeed()) location.speed.toDouble() else null
+            )
+        )
+
         _runState.value = _runState.value.copy(
             routePoints = currentRoute,
             currentAltitudeMeters = lastAltitude ?: 0.0,
@@ -1041,6 +1086,8 @@ class TrackingService : Service(), AutoPauseListener {
                 if (currentSpm > 0) {
                     totalCadenceSamples++
                     sumCadence += currentSpm.toLong()
+                    splitCadenceSamples++
+                    splitCadenceSum += currentSpm.toLong()
                 }
                 val avgCadence = if (totalCadenceSamples > 0) (sumCadence / totalCadenceSamples).toInt() else 0
 
@@ -1094,11 +1141,24 @@ class TrackingService : Service(), AutoPauseListener {
                     ((lapTimeSec.toDouble() / lapMeters) * 1000.0).toInt()
                 } else 0
 
-                // 3. 5-Second Split Massaging Buffer (MIN_SPLIT_PACE_TIME_MS = 5000L)
-                val displayedLapPaceSec = if ((now - lastSplitCrossingTimeMs) < 5000L && lastCompletedSplitPaceSec > 0) {
-                    lastCompletedSplitPaceSec
+                // 3. Current Split Calculations & Strava 5-Second Massaging Buffer (MIN_SPLIT_PACE_TIME_MS = 5000L)
+                val currentMovingTimeMs = movingTimeSec * 1000L
+                val currentSplitDist = (cumulativeDistanceMeters - kilometerStartDistance).coerceAtLeast(0.0)
+                val currentSplitElapsedMovingMs = (currentMovingTimeMs - kilometerStartMovingTimeMs).coerceAtLeast(0L)
+                val currentSplitElapsedSec = currentSplitElapsedMovingMs / 1000.0
+
+                val currentSplitRawPaceSec = if (currentSplitDist > 20.0 && currentSplitElapsedSec > 0) {
+                    ((currentSplitElapsedSec / currentSplitDist) * 1000.0).toInt()
                 } else {
-                    rawLapPaceSec
+                    avgPaceSec
+                }
+
+                val displayedSplitPaceSec = if (currentSplitElapsedMovingMs <= 5000L && lastCompletedSplitPaceSec > 0) {
+                    lastCompletedSplitPaceSec
+                } else if (currentSplitRawPaceSec > 0) {
+                    currentSplitRawPaceSec
+                } else {
+                    avgPaceSec
                 }
 
                 // Estimated calories burned
@@ -1109,17 +1169,23 @@ class TrackingService : Service(), AutoPauseListener {
                     distanceMeters = totalDist,
                     movingTimeSeconds = movingTimeSec,
                     elapsedTimeSeconds = movingTimeSec,
-                    currentPaceSecPerKm = rollingPaceSec,
+                    currentPaceSecPerKm = displayedSplitPaceSec,
                     averagePaceSecPerKm = avgPaceSec,
                     currentCadenceSpm = currentSpm,
                     averageCadenceSpm = avgCadence,
                     lapDistanceMeters = lapMeters,
                     lapTimeSeconds = lapTimeSec,
-                    lapPaceSecPerKm = displayedLapPaceSec,
+                    lapPaceSecPerKm = rawLapPaceSec,
                     calories = calories,
                     currentAltitudeMeters = lastAltitude ?: 0.0,
                     elevationGainMeters = cumulativeElevationGainMeters.roundToInt(),
-                    sportType = currentSportType
+                    sportType = currentSportType,
+                    currentSplitNumber = completedKmCount + 1,
+                    currentSplitDistanceMeters = currentSplitDist.roundToInt(),
+                    currentSplitPaceSecPerKm = displayedSplitPaceSec,
+                    lastSplitPaceSecPerKm = lastCompletedSplitPaceSec,
+                    lastSplitPaceFormatted = if (lastCompletedSplitPaceSec > 0) formatPace(lastCompletedSplitPaceSec) else "-",
+                    completedSplits = kmSplitsList.toList()
                 )
 
                 // 4. Tactical Pace Guidance with 30s Persistence, Escalating Cooldown, & End-of-Step Suppression
@@ -1165,7 +1231,7 @@ class TrackingService : Service(), AutoPauseListener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Runwise Tactical Pacer",
+                "Aerolap Tactical Pacer",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Shows live running pace, cadence, and split alerts"
@@ -1252,7 +1318,7 @@ class TrackingService : Service(), AutoPauseListener {
         const val EXTRA_WORKOUT_JSON = "EXTRA_WORKOUT_JSON"
         const val EXTRA_CUSTOM_NAME = "EXTRA_CUSTOM_NAME"
 
-        private const val CHANNEL_ID = "runwise_workout_channel"
+        private const val CHANNEL_ID = "aerolap_workout_channel"
         private const val NOTIFICATION_ID = 4040
 
         private const val ELEVATION_SMOOTHING_ALPHA = 0.15

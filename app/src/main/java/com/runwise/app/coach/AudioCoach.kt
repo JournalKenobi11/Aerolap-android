@@ -44,9 +44,9 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
     private var lastPaceWarningTime = 0L
     private var lastCadenceWarningTime = 0L
 
-    private val persistenceThresholdSec = 30L // 30 seconds continuous out-of-band required
-    private val enterToleranceSec = 30        // Alert when deviation >= 30s
-    private val exitToleranceSec = 20         // Clear/exit alert when deviation < 20s
+    private val persistenceThresholdSec = 12L // 12 seconds continuous out-of-band required
+    private val enterToleranceSec = 10        // Alert when deviation >= 10s (tight race-pace guidance)
+    private val exitToleranceSec = 5          // Clear/exit alert when deviation < 5s
 
     private var activeFocusRequest: AudioFocusRequest? = null
 
@@ -60,7 +60,10 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts?.let { engine ->
-                val result = engine.setLanguage(Locale.US)
+                var result = engine.setLanguage(Locale.getDefault())
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    result = engine.setLanguage(Locale.ENGLISH)
+                }
                 if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
                     engine.setSpeechRate(1.05f) // Clear, slightly brisk coaching cadence
                     engine.setPitch(1.0f)
@@ -260,13 +263,24 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
         kmNumber: Int,
         splitPaceSecPerKm: Int,
         totalElapsedSeconds: Long,
-        avgPaceSecPerKm: Int
+        avgPaceSecPerKm: Int,
+        splitCadenceSpm: Int? = null,
+        targetPaceSecPerKm: Int? = null
     ) {
         if (isMuted || !isTtsReady) return
         val splitPaceStr = formatPaceSpeech(splitPaceSecPerKm)
         val elapsedStr = formatTimeSpeech(totalElapsedSeconds)
         val avgPaceStr = formatPaceSpeech(avgPaceSecPerKm)
-        val text = "Kilometer $kmNumber complete. Split pace, $splitPaceStr. Total time, $elapsedStr. Average pace, $avgPaceStr."
+        val cadencePart = if (splitCadenceSpm != null && splitCadenceSpm > 0) ", cadence $splitCadenceSpm" else ""
+        val targetPart = if (targetPaceSecPerKm != null && targetPaceSecPerKm > 0 && splitPaceSecPerKm > 0) {
+            val delta = splitPaceSecPerKm - targetPaceSecPerKm
+            when {
+                delta <= -5 -> ". You are ${-delta} seconds ahead of target pace"
+                delta >= 5 -> ". You are $delta seconds behind target pace"
+                else -> ". Right on target pace"
+            }
+        } else ""
+        val text = "Kilometer $kmNumber complete. Split pace, $splitPaceStr$cadencePart. Total time, $elapsedStr. Average pace, $avgPaceStr$targetPart."
         speak(text)
     }
 
@@ -455,7 +469,7 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
     private fun speak(text: String, queueMode: Int = TextToSpeech.QUEUE_FLUSH) {
         try {
             requestAudioDucking()
-            tts?.speak(text, queueMode, null, "runwise_coach_${System.currentTimeMillis()}")
+            tts?.speak(text, queueMode, null, "aerolap_coach_${System.currentTimeMillis()}")
         } catch (_: Exception) {}
     }
 

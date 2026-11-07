@@ -45,7 +45,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
             Column {
                 Text(
                     "APP SETTINGS",
-                    color = RunwiseOrange,
+                    color = AerolapBlue,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
@@ -72,9 +72,9 @@ fun SettingsScreen(repository: RunwiseRepository) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Cloud, contentDescription = null, tint = RunwiseOrange)
+                        Icon(Icons.Default.Cloud, contentDescription = null, tint = AerolapBlue)
                         Text(
-                            "Runwise Server Connection",
+                            "Aerolap Server Connection",
                             color = TextPrimaryDark,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
@@ -92,7 +92,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (serverUrl.contains("100.66")) RunwiseOrange.copy(alpha = 0.2f) else SurfaceDark)
+                                .background(if (serverUrl.contains("100.66")) AerolapBlue.copy(alpha = 0.2f) else SurfaceDark)
                                 .clickable {
                                     serverUrl = "http://100.66.54.63:8081"
                                     repository.setServerUrl(serverUrl)
@@ -107,7 +107,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (serverUrl.contains("127.0.0.1")) RunwiseOrange.copy(alpha = 0.2f) else SurfaceDark)
+                                .background(if (serverUrl.contains("127.0.0.1")) AerolapBlue.copy(alpha = 0.2f) else SurfaceDark)
                                 .clickable {
                                     serverUrl = "http://127.0.0.1:8081"
                                     repository.setServerUrl(serverUrl)
@@ -122,7 +122,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (serverUrl.contains("ts.net")) RunwiseOrange.copy(alpha = 0.2f) else SurfaceDark)
+                                .background(if (serverUrl.contains("ts.net")) AerolapBlue.copy(alpha = 0.2f) else SurfaceDark)
                                 .clickable {
                                     serverUrl = "http://homelab.tail863fa2.ts.net:8081"
                                     repository.setServerUrl(serverUrl)
@@ -145,7 +145,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
                         label = { Text("Server URL") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = RunwiseOrange,
+                            focusedBorderColor = AerolapBlue,
                             unfocusedBorderColor = CardBorderDark,
                             focusedTextColor = TextPrimaryDark,
                             unfocusedTextColor = TextPrimaryDark
@@ -171,7 +171,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
                             .fillMaxWidth()
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RunwiseOrange),
+                        colors = ButtonDefaults.buttonColors(containerColor = AerolapBlue),
                         enabled = !isSyncing
                     ) {
                         if (isSyncing) {
@@ -237,7 +237,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
                         label = { Text("Audio Split Distance (Meters - Default 500m)") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = RunwiseOrange,
+                            focusedBorderColor = AerolapBlue,
                             unfocusedBorderColor = CardBorderDark,
                             focusedTextColor = TextPrimaryDark,
                             unfocusedTextColor = TextPrimaryDark
@@ -256,7 +256,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
                         label = { Text("Minimum Cadence Warning Threshold (SPM)") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = RunwiseOrange,
+                            focusedBorderColor = AerolapBlue,
                             unfocusedBorderColor = CardBorderDark,
                             focusedTextColor = TextPrimaryDark,
                             unfocusedTextColor = TextPrimaryDark
@@ -299,7 +299,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = RunwiseOrange
+                                checkedTrackColor = AerolapBlue
                             )
                         )
                     }
@@ -335,7 +335,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Athlete: Aashay Kadu", color = TextPrimaryDark, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Text("Connected Gmail: aashaykdgr@gmail.com", color = TextSecondaryDark, fontSize = 13.sp)
-                    Text("Target Race: 10K on 22nd November 2026", color = RunwiseOrange, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Target Race: 10K on 22nd November 2026", color = AerolapBlue, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Text("Target Pace: 6:15 min/km (1:02:30 Finish)", color = PaceOnTarget, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Text("Hardware Cadence: Redmi Note 8 Pro Step Sensor Active", color = TextMutedDark, fontSize = 12.sp)
                 }

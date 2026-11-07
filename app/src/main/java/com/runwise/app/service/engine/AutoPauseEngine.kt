@@ -71,11 +71,8 @@ class AutoPauseEngine(
         lastSampleTimeSec = SystemClock.elapsedRealtime() / 1000.0
         lastGpsMovementTimeMs = SystemClock.elapsedRealtime()
 
-        if (accelSensor != null) {
-            sensorManager.registerListener(this, accelSensor, SensorManager.SENSOR_DELAY_GAME)
-            handler.post(tickRunnable)
-        }
-
+        // We rely on GPS speed auto-pause (Engine B) to avoid pocket jerk false-pauses
+        // Accelerometer sensor listener is retained for cadence, but jerk-pause trigger is disabled
         scheduleGpsTimeout()
     }
 

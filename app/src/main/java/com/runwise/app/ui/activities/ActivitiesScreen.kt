@@ -64,7 +64,7 @@ fun ActivitiesScreen(
             Column {
                 Text(
                     "ACTIVITIES",
-                    color = RunwiseOrange,
+                    color = AerolapBlue,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
@@ -110,7 +110,7 @@ fun SportFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
         onClick = onClick,
         label = { Text(label, fontSize = 12.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = RunwiseOrange,
+            selectedContainerColor = AerolapBlue,
             selectedLabelColor = Color.White,
             containerColor = CardDark,
             labelColor = TextSecondaryDark
@@ -128,7 +128,7 @@ fun ActivityListItem(
         "run" -> SportRun
         "walk" -> SportWalk
         "hike" -> SportHike
-        else -> RunwiseOrange
+        else -> AerolapBlue
     }
 
     val icon: ImageVector = when (activity.sportType.lowercase(Locale.ROOT)) {
