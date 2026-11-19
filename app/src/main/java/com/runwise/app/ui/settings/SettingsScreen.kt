@@ -25,6 +25,7 @@ fun SettingsScreen(repository: RunwiseRepository) {
     var minCadence by remember { mutableStateOf(repository.getMinCadenceAlert().toString()) }
     var audioSplitMeters by remember { mutableStateOf(repository.getAudioIntervalMeters().toString()) }
     var audio500mCueEnabled by remember { mutableStateOf(repository.isAudio500mCueEnabled()) }
+    var autoDemElevationEnabled by remember { mutableStateOf(repository.isAutoDemElevationEnabled()) }
 
     val syncData by repository.syncData.collectAsState()
     val isSyncing by repository.isSyncing.collectAsState()
@@ -315,7 +316,80 @@ fun SettingsScreen(repository: RunwiseRepository) {
             }
         }
 
-        // 3. Athlete Profile & Race Target Info
+        // 3. Elevation & Topography (Copernicus 30m DEM)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardDark),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorderDark)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Terrain, contentDescription = null, tint = SportHike)
+                        Text(
+                            "Topography & Elevation (DEM)",
+                            color = TextPrimaryDark,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                autoDemElevationEnabled = !autoDemElevationEnabled
+                                repository.setAutoDemElevationEnabled(autoDemElevationEnabled)
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Auto DEM Elevation Correction",
+                                color = TextPrimaryDark,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "Automatically query server Copernicus 30m DEM for recorded activities to replace noisy GPS elevation",
+                                color = TextMutedDark,
+                                fontSize = 11.sp
+                            )
+                        }
+                        Switch(
+                            checked = autoDemElevationEnabled,
+                            onCheckedChange = {
+                                autoDemElevationEnabled = it
+                                repository.setAutoDemElevationEnabled(it)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = AerolapBlue
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Backed by local Palghar Copernicus GLO-30 GeoTIFF grid (sub-millisecond interpolation) with fallback to global Open-Meteo DEM.",
+                        color = TextMutedDark,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+        }
+
+        // 4. Athlete Profile & Race Target Info
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),

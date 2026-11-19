@@ -63,6 +63,7 @@ fun ActivityDetailScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
+    var isDemLoading by remember { mutableStateOf(false) }
 
     LaunchedEffect(activityId) {
         if (detailResponse == null) {
@@ -143,6 +144,36 @@ fun ActivityDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                isDemLoading = true
+                                val res = repository.correctActivityElevationWithDem(activityId)
+                                isDemLoading = false
+                                res.onSuccess { dem ->
+                                    Toast.makeText(context, "Copernicus DEM applied: +${dem.elevationGainMeters}m", Toast.LENGTH_SHORT).show()
+                                    detailResponse = repository.getCachedActivityDetail(activityId)
+                                }.onFailure { err ->
+                                    Toast.makeText(context, "DEM lookup failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        enabled = !isDemLoading
+                    ) {
+                        if (isDemLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = AerolapBlue
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Terrain,
+                                contentDescription = "Correct Elevation with DEM",
+                                tint = if (detailResponse?.streams?.elevationCurve?.isNotEmpty() == true) SportHike else TextMutedDark
+                            )
+                        }
+                    }
                     IconButton(onClick = { showDeleteDialog = true }) {
                         Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = FatigueAtl)
                     }
@@ -229,6 +260,26 @@ fun ActivityDetailScreen(
 
                 // 2. Primary Metrics Grid
                 PrimaryMetricsGrid(activity = activity)
+
+                // 2.5 DEM Elevation Correction Action Card
+                DemElevationActionCard(
+                    elevationMeters = activity.elevationMeters,
+                    hasElevationCurve = detail.streams.elevationCurve.isNotEmpty(),
+                    isCorrecting = isDemLoading,
+                    onCorrectElevation = {
+                        scope.launch {
+                            isDemLoading = true
+                            val res = repository.correctActivityElevationWithDem(activityId)
+                            isDemLoading = false
+                            res.onSuccess { dem ->
+                                Toast.makeText(context, "Copernicus DEM applied: +${dem.elevationGainMeters}m", Toast.LENGTH_SHORT).show()
+                                detailResponse = repository.getCachedActivityDetail(activityId)
+                            }.onFailure { err ->
+                                Toast.makeText(context, "DEM lookup failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                )
 
                 // 3. Strava-style Workout Laps / Analysis (ONLY for interval workouts; non-interval workouts show 1km splits)
                 val hasActualIntervals = activity.workoutType?.contains("Interval", ignoreCase = true) == true ||
@@ -361,6 +412,111 @@ fun PrimaryMetricsGrid(activity: ActivityItem) {
                     MetricTile("Calories", "${activity.calories} kcal", Icons.Default.LocalFireDepartment, AerolapBlue)
                 } else {
                     MetricTile("Calories", "-- kcal", Icons.Default.LocalFireDepartment, TextMutedDark)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DemElevationActionCard(
+    elevationMeters: Int,
+    hasElevationCurve: Boolean,
+    isCorrecting: Boolean,
+    onCorrectElevation: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardDark),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (hasElevationCurve) SportHike.copy(alpha = 0.5f) else CardBorderDark
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (hasElevationCurve) SportHike.copy(alpha = 0.2f) else SurfaceDark),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Terrain,
+                        contentDescription = null,
+                        tint = if (hasElevationCurve) SportHike else TextMutedDark,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "Copernicus 30m DEM",
+                            color = TextPrimaryDark,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (hasElevationCurve) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(SportHike.copy(alpha = 0.2f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text("ACTIVE", color = SportHike, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Text(
+                        if (hasElevationCurve) "Authoritative ground topography (+${elevationMeters}m gain)"
+                        else "GPS barometric noise. Tap to apply 30m DEM ground elevation.",
+                        color = TextMutedDark,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Button(
+                onClick = onCorrectElevation,
+                enabled = !isCorrecting,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (hasElevationCurve) SurfaceDark else SportHike,
+                    contentColor = if (hasElevationCurve) TextPrimaryDark else Color.White
+                ),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.height(36.dp)
+            ) {
+                if (isCorrecting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                } else {
+                    Text(
+                        if (hasElevationCurve) "Re-query" else "Apply DEM",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }

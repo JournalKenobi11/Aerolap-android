@@ -95,6 +95,14 @@ class RunwiseRepository private constructor(private val context: Context) {
         prefs.edit().putBoolean(PREF_AUDIO_500M_CUE, enabled).apply()
     }
 
+    fun isAutoDemElevationEnabled(): Boolean {
+        return prefs.getBoolean(PREF_AUTO_DEM_ELEVATION, true) // Default true for Copernicus 30m DEM
+    }
+
+    fun setAutoDemElevationEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(PREF_AUTO_DEM_ELEVATION, enabled).apply()
+    }
+
     fun sync(onComplete: ((Boolean, String?) -> Unit)? = null) {
         if (_isSyncing.value) return
 
@@ -251,7 +259,7 @@ class RunwiseRepository private constructor(private val context: Context) {
         saveDetailToDiskCache(id, detail)
 
         // Asynchronously query server Copernicus 30m DEM for authoritative ground elevation
-        if (routePoints.isNotEmpty()) {
+        if (isAutoDemElevationEnabled() && routePoints.isNotEmpty()) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val dem = fetchDemElevation(routePoints)
@@ -262,6 +270,16 @@ class RunwiseRepository private constructor(private val context: Context) {
                             activity = item.copy(elevationMeters = dem.elevationGainMeters)
                         )
                         saveDetailToDiskCache(id, enrichedDetail)
+                        detailMemoryCache[id] = enrichedDetail
+
+                        // Update in-memory local activities and persist to local_activities.json
+                        withContext(Dispatchers.Main) {
+                            val currentList = _localActivities.value.map { act ->
+                                if (act.id == id) act.copy(elevationMeters = dem.elevationGainMeters) else act
+                            }
+                            _localActivities.value = currentList
+                            persistLocalActivities(currentList)
+                        }
                     }
                 } catch (_: Exception) {}
             }
@@ -305,6 +323,56 @@ class RunwiseRepository private constructor(private val context: Context) {
                 api.getDemElevation(req)
             } catch (_: Exception) {
                 null
+            }
+        }
+    }
+
+    suspend fun correctActivityElevationWithDem(activityId: String): Result<DemElevationResponse> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val detail = getCachedActivityDetail(activityId)
+                    ?: getActivityDetail(activityId).getOrNull()
+                    ?: return@withContext Result.failure(Exception("Activity details not found"))
+
+                val coordinates: List<Pair<Double, Double>> = if (detail.routeCoordinates.isNotEmpty()) {
+                    detail.routeCoordinates.map { Pair(it[0], it[1]) }
+                } else if (!detail.activity.encodedPolyline.isNullOrBlank()) {
+                    PolylineUtils.decodePolyline(detail.activity.encodedPolyline)
+                } else {
+                    return@withContext Result.failure(Exception("No GPS route coordinates available"))
+                }
+
+                if (coordinates.isEmpty()) {
+                    return@withContext Result.failure(Exception("GPS coordinates list is empty"))
+                }
+
+                val dem = fetchDemElevation(coordinates)
+                    ?: return@withContext Result.failure(Exception("DEM elevation server unreachable"))
+
+                if (dem.elevationCurve.isEmpty()) {
+                    return@withContext Result.failure(Exception("No elevation points returned from DEM"))
+                }
+
+                val enrichedStreams = detail.streams.copy(elevationCurve = dem.elevationCurve)
+                val enrichedDetail = detail.copy(
+                    streams = enrichedStreams,
+                    activity = detail.activity.copy(elevationMeters = dem.elevationGainMeters)
+                )
+
+                saveDetailToDiskCache(activityId, enrichedDetail)
+                detailMemoryCache[activityId] = enrichedDetail
+
+                withContext(Dispatchers.Main) {
+                    val currentList = _localActivities.value.map { act ->
+                        if (act.id == activityId) act.copy(elevationMeters = dem.elevationGainMeters) else act
+                    }
+                    _localActivities.value = currentList
+                    persistLocalActivities(currentList)
+                }
+
+                Result.success(dem)
+            } catch (e: Exception) {
+                Result.failure(e)
             }
         }
     }
@@ -736,6 +804,7 @@ class RunwiseRepository private constructor(private val context: Context) {
         private const val PREF_MIN_CADENCE = "pref_min_cadence"
         private const val PREF_AUDIO_INTERVAL_METERS = "pref_audio_interval_meters"
         private const val PREF_AUDIO_500M_CUE = "pref_audio_500m_cue"
+        private const val PREF_AUTO_DEM_ELEVATION = "pref_auto_dem_elevation"
         private const val PREF_SAVED_WORKOUTS = "pref_saved_workouts"
         private const val CACHE_FILE_NAME = "runwise_sync_cache.json"
         private const val LOCAL_ACTIVITIES_FILE = "local_activities.json"
