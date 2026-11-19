@@ -39,14 +39,19 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
 
     private var currentPaceClass = PaceClassification.ON_PACE
     private var stateStartMs = 0L
+    private var recoveryStartMs = 0L
     private var paceAlertCount = 0
     private var hadActiveAlertInState = false
     private var lastPaceWarningTime = 0L
     private var lastCadenceWarningTime = 0L
 
-    private val persistenceThresholdSec = 12L // 12 seconds continuous out-of-band required
-    private val enterToleranceSec = 10        // Alert when deviation >= 10s (tight race-pace guidance)
-    private val exitToleranceSec = 5          // Clear/exit alert when deviation < 5s
+    private val persistenceThresholdSec = 6L          // 6 seconds continuous out-of-band required
+    private val recoveryPersistenceThresholdSec = 6L   // 6 seconds continuous recovery required
+    private val fastTriggerDelta = 10                  // Alert if faster by >= 10s
+    private val slowTriggerDelta = 13                  // Alert if slower by >= 13s
+    private val fastRecoveryDelta = 4                  // Clear fast alert when within 4s of target
+    private val slowRecoveryDelta = 6                  // Clear slow alert when within 6s of target
+    private val cooldownMs = 35_000L                   // 35s minimum refractory period between cues
 
     private var activeFocusRequest: AudioFocusRequest? = null
 
@@ -95,9 +100,22 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
     fun resetStepPaceTracking() {
         currentPaceClass = PaceClassification.ON_PACE
         stateStartMs = 0L
+        recoveryStartMs = 0L
         paceAlertCount = 0
         hadActiveAlertInState = false
+        lastPaceWarningTime = 0L
         resetStepCadenceTracking()
+    }
+
+    /**
+     * Play crisp confirmation chime tone + soft haptic pulse when runner recovers on pace.
+     */
+    fun playBackOnPaceChime() {
+        if (isMuted) return
+        try {
+            vibratePulse(120L)
+            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, 200)
+        } catch (_: Exception) {}
     }
 
     /**
@@ -296,13 +314,16 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
     }
 
     /**
-     * Target Pace Guidance & Escalating Cooldown Throttler (Strava usy.java:1523-1570):
-     * - 30 seconds continuous persistence required for 1st alert
-     * - Escalating cooldown: 60s -> 180s (3m) -> 300s (5m) -> 420s (7m)
-     * - Hard capped at maximum 4 alerts per state
-     * - Back-on-pace announcement: "You're back on pace." spoken once upon recovery
-     * - End-of-step suppression (<10s remaining time or <10s distance ETA)
-     * - Startup suppression: first 200m, first 20s after resume, first 25s of new step
+     * Target Pace Guidance & Anti-Chattering State Machine:
+     * - Asymmetric outer trigger: alert if faster by >= 10s or slower by >= 13s.
+     * - 6 seconds continuous persistence required before triggering warning cue.
+     * - Refractory cooldown: 35 seconds minimum between warning cues.
+     * - Unidirectional recovery: clears FAST when < 4s faster; clears SLOW when < 6s slower.
+     * - 6 seconds continuous recovery persistence required before confirming on pace.
+     * - Back-on-pace acknowledgment: plays pleasant confirmation chime tone (zero chatter).
+     * - Concise speech under 1.2s: "Ease back. 6:12." or "Pick it up. 6:38."
+     * - End-of-step suppression (<10s remaining time or <10s distance ETA).
+     * - Startup suppression: first 200m, first 20s after resume, first 25s of new step.
      */
     fun evaluatePaceWarning(
         rollingPaceSecPerKm: Int,
@@ -312,9 +333,14 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
         secondsSinceStepStart: Long = 999L,
         remainingStepSeconds: Long? = null,
         remainingStepMeters: Double? = null,
-        rollingSpeedMps: Double? = null
+        rollingSpeedMps: Double? = null,
+        isMutedByFilter: Boolean = false
     ) {
-        if (isMuted || !isTtsReady || targetPaceSecPerKm <= 0) return
+        if (isMuted || !isTtsReady || targetPaceSecPerKm <= 0 || isMutedByFilter) {
+            stateStartMs = 0L
+            recoveryStartMs = 0L
+            return
+        }
 
         // 1. Startup suppression
         if (currentDistanceMeters < 200) return   // Suppress first 200m
@@ -333,65 +359,92 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
         val fastDelta = targetPaceSecPerKm - rollingPaceSecPerKm
         val slowDelta = rollingPaceSecPerKm - targetPaceSecPerKm
 
-        // 3. Classification with asymmetric hysteresis (enter at 30s deviation, exit at <20s)
-        val newClass = when {
-            fastDelta >= enterToleranceSec -> PaceClassification.FAST
-            slowDelta >= enterToleranceSec -> PaceClassification.SLOW
-            fastDelta < exitToleranceSec && slowDelta < exitToleranceSec -> PaceClassification.ON_PACE
-            else -> currentPaceClass // Retain current in deadband
-        }
+        when (currentPaceClass) {
+            PaceClassification.ON_PACE -> {
+                recoveryStartMs = 0L
+                val wantsFast = fastDelta >= fastTriggerDelta
+                val wantsSlow = slowDelta >= slowTriggerDelta
 
-        // 4. State transition
-        if (newClass != currentPaceClass) {
-            val prevClass = currentPaceClass
-            currentPaceClass = newClass
-            stateStartMs = now
+                if (wantsFast || wantsSlow) {
+                    val start = if (stateStartMs == 0L) now.also { stateStartMs = it } else stateStartMs
+                    val persisted = (now - start) >= (persistenceThresholdSec * 1000L)
+                    val cooledDown = (now - lastPaceWarningTime) >= cooldownMs
 
-            if (newClass == PaceClassification.ON_PACE) {
-                // Recovered to target! Acknowledge once
-                if ((prevClass == PaceClassification.FAST || prevClass == PaceClassification.SLOW) && hadActiveAlertInState) {
-                    speak("You're back on pace.", queueMode = TextToSpeech.QUEUE_ADD)
+                    if (persisted && cooledDown) {
+                        currentPaceClass = if (wantsFast) PaceClassification.FAST else PaceClassification.SLOW
+                        hadActiveAlertInState = true
+                        lastPaceWarningTime = now
+                        stateStartMs = 0L
+                        recoveryStartMs = 0L
+
+                        val currentStr = formatPaceSpeechShort(rollingPaceSecPerKm)
+                        if (wantsFast) {
+                            speak("Ease back. $currentStr.", queueMode = TextToSpeech.QUEUE_ADD)
+                        } else {
+                            speak("Pick it up. $currentStr.", queueMode = TextToSpeech.QUEUE_ADD)
+                        }
+                    }
+                } else {
+                    stateStartMs = 0L
                 }
-                paceAlertCount = 0
-                hadActiveAlertInState = false
-                return
-            } else {
-                paceAlertCount = 0
-                hadActiveAlertInState = false
             }
-        }
 
-        if (currentPaceClass == PaceClassification.ON_PACE) return
+            PaceClassification.FAST -> {
+                stateStartMs = 0L
+                val hasRecovered = fastDelta < fastRecoveryDelta
 
-        // 5. Throttling Schedule:
-        // Alert 1 (count 0): elapsedInState >= 30s && cooldown >= 60s
-        // Alert 2 (count 1): elapsedInState >= 180s (3 min)
-        // Alert 3 (count 2): elapsedInState >= 300s (5 min)
-        // Alert 4 (count 3): elapsedInState >= 420s (7 min)
-        // Capped after count 4.
-        val elapsedInStateSec = (now - stateStartMs) / 1000L
-        val cooldownMs = now - lastPaceWarningTime
+                if (hasRecovered) {
+                    val start = if (recoveryStartMs == 0L) now.also { recoveryStartMs = it } else recoveryStartMs
+                    val persisted = (now - start) >= (recoveryPersistenceThresholdSec * 1000L)
 
-        val shouldAlert = when (paceAlertCount) {
-            0 -> elapsedInStateSec >= persistenceThresholdSec && cooldownMs >= 60_000L
-            1 -> elapsedInStateSec >= 180L && paceAlertCount < 4
-            2 -> elapsedInStateSec >= 300L && paceAlertCount < 4
-            3 -> elapsedInStateSec >= 420L && paceAlertCount < 4
-            else -> false
-        }
+                    if (persisted) {
+                        currentPaceClass = PaceClassification.ON_PACE
+                        recoveryStartMs = 0L
+                        stateStartMs = 0L
+                        if (hadActiveAlertInState) {
+                            playBackOnPaceChime()
+                            hadActiveAlertInState = false
+                            lastPaceWarningTime = now
+                        }
+                    }
+                } else {
+                    recoveryStartMs = 0L
+                    val reminderCooledDown = (now - lastPaceWarningTime) >= (cooldownMs + 25_000L)
+                    if (reminderCooledDown) {
+                        lastPaceWarningTime = now
+                        val currentStr = formatPaceSpeechShort(rollingPaceSecPerKm)
+                        speak("Ease back. $currentStr.", queueMode = TextToSpeech.QUEUE_ADD)
+                    }
+                }
+            }
 
-        if (shouldAlert) {
-            lastPaceWarningTime = now
-            paceAlertCount++
-            hadActiveAlertInState = true
+            PaceClassification.SLOW -> {
+                stateStartMs = 0L
+                val hasRecovered = slowDelta < slowRecoveryDelta
 
-            val targetStr = formatPaceSpeech(targetPaceSecPerKm)
-            val currentStr = formatPaceSpeech(rollingPaceSecPerKm)
+                if (hasRecovered) {
+                    val start = if (recoveryStartMs == 0L) now.also { recoveryStartMs = it } else recoveryStartMs
+                    val persisted = (now - start) >= (recoveryPersistenceThresholdSec * 1000L)
 
-            if (currentPaceClass == PaceClassification.FAST) {
-                speak("Slow down. Your pace is $currentStr, aim for $targetStr.", queueMode = TextToSpeech.QUEUE_ADD)
-            } else {
-                speak("Pick it up. Your pace is $currentStr, aim for $targetStr.", queueMode = TextToSpeech.QUEUE_ADD)
+                    if (persisted) {
+                        currentPaceClass = PaceClassification.ON_PACE
+                        recoveryStartMs = 0L
+                        stateStartMs = 0L
+                        if (hadActiveAlertInState) {
+                            playBackOnPaceChime()
+                            hadActiveAlertInState = false
+                            lastPaceWarningTime = now
+                        }
+                    }
+                } else {
+                    recoveryStartMs = 0L
+                    val reminderCooledDown = (now - lastPaceWarningTime) >= (cooldownMs + 25_000L)
+                    if (reminderCooledDown) {
+                        lastPaceWarningTime = now
+                        val currentStr = formatPaceSpeechShort(rollingPaceSecPerKm)
+                        speak("Pick it up. $currentStr.", queueMode = TextToSpeech.QUEUE_ADD)
+                    }
+                }
             }
         }
     }
@@ -513,6 +566,12 @@ class AudioCoach(private val context: Context) : TextToSpeech.OnInitListener {
         val min = secPerKm / 60
         val sec = secPerKm % 60
         return if (sec == 0) "$min minutes per kilometer" else "$min $sec per kilometer"
+    }
+
+    private fun formatPaceSpeechShort(secPerKm: Int): String {
+        val min = secPerKm / 60
+        val sec = secPerKm % 60
+        return if (sec == 0) "$min minute pace" else "$min $sec"
     }
 
     private fun formatTimeSpeech(totalSec: Long): String {

@@ -36,6 +36,7 @@ import com.runwise.app.service.engine.AutoPauseListener
 import com.runwise.app.service.engine.FilterReason
 import com.runwise.app.service.engine.GpsKinematicFilter
 import com.runwise.app.service.engine.HardwareSpeedCache
+import com.runwise.app.service.engine.LivePaceFilter
 import com.runwise.app.service.engine.RollingPaceEstimator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -119,6 +120,7 @@ class TrackingService : Service(), AutoPauseListener {
     private val hardwareSpeedCache = HardwareSpeedCache()
     private val gpsKinematicFilter = GpsKinematicFilter()
     private val rollingPaceEstimator = RollingPaceEstimator()
+    private val livePaceFilter = LivePaceFilter()
     private lateinit var autoPauseEngine: AutoPauseEngine
 
     private val serviceScope = CoroutineScope(Dispatchers.Default)
@@ -329,6 +331,7 @@ class TrackingService : Service(), AutoPauseListener {
         hardwareSpeedCache.clear()
         gpsKinematicFilter.reset()
         rollingPaceEstimator.reset()
+        livePaceFilter.reset()
         audioCoach.resetStepPaceTracking()
         audioCoach.resetStepCadenceTracking()
         resetStepMilestones()
@@ -417,6 +420,7 @@ class TrackingService : Service(), AutoPauseListener {
         hardwareSpeedCache.clear()
         gpsKinematicFilter.reset()
         rollingPaceEstimator.reset()
+        livePaceFilter.reset()
         audioCoach.resetStepPaceTracking()
         audioCoach.resetStepCadenceTracking()
         resetStepMilestones()
@@ -612,6 +616,7 @@ class TrackingService : Service(), AutoPauseListener {
 
             // Strava invariant: reset rolling pace buffer & audio pacer on step transition
             rollingPaceEstimator.reset()
+            livePaceFilter.reset()
             audioCoach.resetStepPaceTracking()
             audioCoach.resetStepCadenceTracking()
             resetStepMilestones()
@@ -688,6 +693,7 @@ class TrackingService : Service(), AutoPauseListener {
 
             // Reset step-specific estimators & milestones
             rollingPaceEstimator.reset()
+            livePaceFilter.reset()
             audioCoach.resetStepPaceTracking()
             audioCoach.resetStepCadenceTracking()
             resetStepMilestones()
@@ -873,10 +879,11 @@ class TrackingService : Service(), AutoPauseListener {
         val currentRollingPace = rollingPaceEstimator.calculateRollingPaceSecPerKm(lapElapsedMs)
         val currentRollingSpeedMps = rollingPaceEstimator.calculateRollingSpeedMps(lapElapsedMs)
 
-        // Feed speed to GPS Auto-Pause engine (vxz.java)
+        // Feed speed to GPS Auto-Pause engine (vxz.java) and LivePaceFilter
         val speedForEngine = hardwareSpeedCache.getFreshSpeedMps(now) ?: currentRollingSpeedMps
         if (speedForEngine != null) {
             autoPauseEngine.onGpsSpeedUpdate(speedForEngine)
+            livePaceFilter.update(speedForEngine, now)
         }
 
         // Record time-series telemetry streams for every accepted GPS point
@@ -1202,15 +1209,18 @@ class TrackingService : Service(), AutoPauseListener {
                         (currentStep.targetDistanceMeters.toDouble() - lapDistanceMeters).coerceAtLeast(0.0)
                     } else null
 
+                    val filteredLivePace = livePaceFilter.getFilteredPaceSecPerKm() ?: rollingPaceSec
+
                     audioCoach.evaluatePaceWarning(
-                        rollingPaceSecPerKm = rollingPaceSec,
+                        rollingPaceSecPerKm = filteredLivePace,
                         targetPaceSecPerKm = activeTargetPace,
                         currentDistanceMeters = totalDist,
                         secondsSinceResume = secondsSinceResume,
                         secondsSinceStepStart = secondsSinceStepStart,
                         remainingStepSeconds = remainingStepSeconds,
                         remainingStepMeters = remainingStepMeters,
-                        rollingSpeedMps = rollingSpeedMps
+                        rollingSpeedMps = rollingSpeedMps,
+                        isMutedByFilter = livePaceFilter.isMuted(now)
                     )
                 }
 
