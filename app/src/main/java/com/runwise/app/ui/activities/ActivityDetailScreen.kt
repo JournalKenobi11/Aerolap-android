@@ -259,6 +259,7 @@ fun ActivityDetailScreen(
                 ExportActionsSection(
                     activity = activity,
                     routeCoordinates = coordinates,
+                    streams = detail.streams,
                     serverUrl = repository.getServerUrl(),
                     context = context
                 )
@@ -1251,7 +1252,8 @@ fun ExportActionsSection(
     activity: ActivityItem,
     routeCoordinates: List<Pair<Double, Double>>,
     serverUrl: String,
-    context: Context
+    context: Context,
+    streams: ActivityStreamsData? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1268,7 +1270,7 @@ fun ExportActionsSection(
                         val appDir = java.io.File(context.getExternalFilesDir(null), "Aerolap")
                         val gpxFile = java.io.File(appDir, "${activity.id}.gpx")
                         if (gpxFile.exists() || routeCoordinates.isNotEmpty()) {
-                            shareLocalGpx(context, activity, routeCoordinates)
+                            shareLocalGpx(context, activity, routeCoordinates, streams)
                         } else {
                             val gpxUrl = "$serverUrl/api/mobile/activities/${activity.id}/gpx"
                             shareOrOpenUrl(context, gpxUrl, "Download / Share GPX Route")
@@ -1287,7 +1289,7 @@ fun ExportActionsSection(
                     onClick = {
                         if (activity.isPhoneRecorded || activity.id.startsWith("phone-")) {
                             // Phone recorded activities are shared via rich GPX with telemetry
-                            shareLocalGpx(context, activity, routeCoordinates)
+                            shareLocalGpx(context, activity, routeCoordinates, streams)
                         } else {
                             val fitUrl = "$serverUrl/api/mobile/activities/${activity.id}/original"
                             shareOrOpenUrl(context, fitUrl, "Download / Share FIT File")
@@ -1306,20 +1308,86 @@ fun ExportActionsSection(
     }
 }
 
-private fun shareLocalGpx(context: Context, activity: ActivityItem, routeCoordinates: List<Pair<Double, Double>>) {
+private fun shareLocalGpx(
+    context: Context,
+    activity: ActivityItem,
+    routeCoordinates: List<Pair<Double, Double>>,
+    streams: ActivityStreamsData? = null
+) {
     try {
         val appDir = java.io.File(context.getExternalFilesDir(null), "Aerolap")
         if (!appDir.exists()) appDir.mkdirs()
         val gpxFile = java.io.File(appDir, "${activity.id}.gpx")
-        val xml = PolylineUtils.generateGpxXml(
-            activityName = activity.name,
-            sportType = activity.sportType,
-            startTimeIso = activity.startDateTime.replace(" ", "T") + "Z",
-            routePoints = routeCoordinates,
-            elevationMeters = activity.elevationMeters,
-            movingTimeSeconds = activity.movingTimeSeconds
-        )
-        gpxFile.writeText(xml)
+
+        // 1. If an authentic rich GPX already exists on disk and is non-empty, preserve and share it directly!
+        if (!gpxFile.exists() || gpxFile.length() < 50) {
+            val totalPts = routeCoordinates.size
+            val effectiveDurationSec = if (activity.movingTimeSeconds > 0) activity.movingTimeSeconds else totalPts.toLong()
+            val startEpoch = try {
+                val clean = activity.startDateTime.replace(" ", "T").replace("Z", "")
+                java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                }.parse(clean)?.time ?: System.currentTimeMillis()
+            } catch (_: Exception) {
+                System.currentTimeMillis()
+            }
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }
+
+            val cadenceCurve = streams?.cadenceCurve.orEmpty()
+            val elevationCurve = streams?.elevationCurve.orEmpty()
+            val paceCurve = streams?.paceCurve.orEmpty()
+
+            val xml = if (cadenceCurve.isNotEmpty() || elevationCurve.isNotEmpty()) {
+                val trackPoints = routeCoordinates.mapIndexed { i, pt ->
+                    val ptOffsetSec = if (totalPts > 1) (i.toDouble() / (totalPts - 1) * effectiveDurationSec).toLong() else 0L
+                    val ptTimeIso = sdf.format(java.util.Date(startEpoch + ptOffsetSec * 1000L))
+
+                    val cad = if (cadenceCurve.isNotEmpty()) {
+                        val cadIdx = (i.toDouble() / totalPts * cadenceCurve.size).toInt().coerceIn(0, cadenceCurve.size - 1)
+                        cadenceCurve[cadIdx].takeIf { it > 0 }
+                    } else null
+
+                    val ele = if (elevationCurve.isNotEmpty()) {
+                        val eleIdx = (i.toDouble() / totalPts * elevationCurve.size).toInt().coerceIn(0, elevationCurve.size - 1)
+                        elevationCurve[eleIdx]
+                    } else activity.elevationMeters.toDouble()
+
+                    val speedMps = if (paceCurve.isNotEmpty()) {
+                        val paceIdx = (i.toDouble() / totalPts * paceCurve.size).toInt().coerceIn(0, paceCurve.size - 1)
+                        val p = paceCurve[paceIdx]
+                        if (p > 0) 1000.0 / p else null
+                    } else null
+
+                    com.runwise.app.util.GpsTrackPoint(
+                        lat = pt.first,
+                        lon = pt.second,
+                        ele = ele,
+                        timestampIso = ptTimeIso,
+                        cadence = cad,
+                        speedMps = speedMps
+                    )
+                }
+
+                PolylineUtils.generateRichGpxXml(
+                    activityName = activity.name,
+                    sportType = activity.sportType,
+                    startTimeIso = activity.startDateTime.replace(" ", "T") + "Z",
+                    trackPoints = trackPoints
+                )
+            } else {
+                PolylineUtils.generateGpxXml(
+                    activityName = activity.name,
+                    sportType = activity.sportType,
+                    startTimeIso = activity.startDateTime.replace(" ", "T") + "Z",
+                    routePoints = routeCoordinates,
+                    elevationMeters = activity.elevationMeters,
+                    movingTimeSeconds = activity.movingTimeSeconds
+                )
+            }
+            gpxFile.writeText(xml)
+        }
 
         val uri = androidx.core.content.FileProvider.getUriForFile(
             context,

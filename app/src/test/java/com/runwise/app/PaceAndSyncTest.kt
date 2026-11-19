@@ -676,4 +676,35 @@ class PaceAndSyncTest {
         assertEquals(3, dem?.elevationCurve?.size)
         assertTrue("Copernicus DEM must report valid altitude", dem?.elevationCurve?.first() ?: 0.0 > 0.0)
     }
+
+    @Test
+    fun testRichGpxXmlIncludesCadenceExtension() {
+        val pts = listOf(
+            com.runwise.app.util.GpsTrackPoint(
+                lat = 20.0,
+                lon = 72.0,
+                ele = 10.0,
+                timestampIso = "2026-11-19T10:00:00Z",
+                cadence = 168,
+                speedMps = 3.2
+            ),
+            com.runwise.app.util.GpsTrackPoint(
+                lat = 20.001,
+                lon = 72.001,
+                ele = 10.5,
+                timestampIso = "2026-11-19T10:00:01Z",
+                cadence = 170,
+                speedMps = 3.3
+            )
+        )
+        val xml = com.runwise.app.util.PolylineUtils.generateRichGpxXml(
+            activityName = "Morning Run",
+            sportType = "Run",
+            startTimeIso = "2026-11-19T10:00:00Z",
+            trackPoints = pts
+        )
+        assertTrue("Rich GPX must contain gpxtpx:TrackPointExtension", xml.contains("<gpxtpx:TrackPointExtension>"))
+        assertTrue("Rich GPX must contain gpxtpx:cad tags with 168 SPM", xml.contains("<gpxtpx:cad>168</gpxtpx:cad>"))
+        assertTrue("Rich GPX must contain gpxtpx:cad tags with 170 SPM", xml.contains("<gpxtpx:cad>170</gpxtpx:cad>"))
+    }
 }
