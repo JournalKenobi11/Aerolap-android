@@ -55,7 +55,18 @@ object AnalyticsEngine {
             cadenceStream.map { it.toDouble() },
             distanceBins
         )
-        val resampledElevation = resampleStream(distanceStream, elevationStream, distanceBins)
+
+        // Resample elevationStream along its authentic distance domain (handles DEM/subsampled elevation curves)
+        val maxDist = if (distanceStream.isNotEmpty()) distanceStream.last() else (distanceBins.lastOrNull() ?: 0.0)
+        val elevDistances = if (elevationStream.size == distanceStream.size) {
+            distanceStream
+        } else if (elevationStream.isNotEmpty()) {
+            val step = if (elevationStream.size > 1) maxDist / (elevationStream.size - 1) else 0.0
+            elevationStream.indices.map { it * step }
+        } else {
+            emptyList()
+        }
+        val resampledElevation = resampleStream(elevDistances, elevationStream, distanceBins)
 
         // Clean pace spikes: replace zero/unrealistic with adjacent or filter
         val cleanedPace = resampledPace.map { p ->
@@ -77,9 +88,9 @@ object AnalyticsEngine {
         val medianCadence = centeredMedianFilter(cleanedCadence, kernelSize = 3)
         val smoothedCadence = centeredMovingAverage(medianCadence, kernelSize = 3)
 
-        // Elevation: Centered moving average (kernel=5)
-        val medianElevation = centeredMedianFilter(resampledElevation, kernelSize = 5)
-        val smoothedElevation = centeredMovingAverage(medianElevation, kernelSize = 5)
+        // Elevation: Centered moving average (kernel=15 ~ 150m spatial window to eliminate canopy & building raster steps)
+        val medianElevation = centeredMedianFilter(resampledElevation, kernelSize = 15)
+        val smoothedElevation = centeredMovingAverage(medianElevation, kernelSize = 15)
 
         // Calculate Percentiles and Stats
         val validPaces = smoothedPace.filter { it in 120.0..1200.0 }
@@ -95,17 +106,17 @@ object AnalyticsEngine {
         val minElevation = smoothedElevation.minOrNull() ?: 0.0
         val maxElevation = smoothedElevation.maxOrNull() ?: 0.0
 
-        // Strava & Dreeve Hysteresis climbing barrier (2.5m threshold) to prevent flat course quantization noise from accumulating fake gain
+        // Strava & Dreeve Hysteresis climbing barrier (3.0m threshold) to prevent flat course quantization noise from accumulating fake gain
         var totalGain = 0.0
         if (smoothedElevation.isNotEmpty()) {
             var referenceAlt = smoothedElevation.first()
-            val hysteresisThreshold = 2.5
+            val hysteresisThreshold = 3.0
             for (alt in smoothedElevation) {
                 val diff = alt - referenceAlt
                 if (diff >= hysteresisThreshold) {
                     totalGain += diff
                     referenceAlt = alt
-                } else if (alt < referenceAlt) {
+                } else if (referenceAlt - alt >= hysteresisThreshold) {
                     referenceAlt = alt
                 }
             }

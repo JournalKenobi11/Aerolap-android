@@ -653,6 +653,43 @@ class PaceAndSyncTest {
     }
 
     @Test
+    fun testDemElevationResamplingAcrossFullDistanceDomain() {
+        // 2169 distance points across 5100 meters (1 Hz)
+        val distances = (0..2168).map { it * (5100.0 / 2168.0) }
+        val dummyPace = List(2169) { 360.0 }
+        val dummyCadence = List(2169) { 168 }
+
+        // DEM elevation stream with only 434 points (e.g. from server downsampled lookup)
+        // Varies from 13m at start down to 5m near finish
+        val demElevation = (0..433).map { i ->
+            13.0 - (i.toDouble() / 433.0) * 8.0 + (if (i % 10 == 0) 1.5 else -0.5)
+        }
+
+        val result = com.runwise.app.util.AnalyticsEngine.processTelemetry(
+            distanceStream = distances,
+            paceStream = dummyPace,
+            cadenceStream = dummyCadence,
+            elevationStream = demElevation
+        )
+
+        // 5100m / 25m bins = 204 bins
+        assertEquals(204, result.distanceBinsMeters.size)
+        assertEquals(204, result.smoothedElevationMeters.size)
+
+        // The elevation curve must NOT flatline after 950m!
+        // At 25m bins: index 40 is 1000m, index 160 is 4000m
+        val elevAt1000m = result.smoothedElevationMeters[40]
+        val elevAt4000m = result.smoothedElevationMeters[160]
+
+        assertTrue("Elevation at 1000m should be around ~10-12m, was: $elevAt1000m", elevAt1000m in 9.0..13.0)
+        assertTrue("Elevation at 4000m should be around ~5-8m, was: $elevAt4000m", elevAt4000m in 5.0..8.5)
+        assertTrue("Elevation profile must span full distance without flatlining", Math.abs(elevAt4000m - elevAt1000m) > 1.5)
+
+        // Total gain with 3.0m hysteresis on flat course should be modest (< 20m), not inflated
+        assertTrue("Climbing gain must be < 20m, was: ${result.elevationGainMeters}", result.elevationGainMeters < 20.0)
+    }
+
+    @Test
     fun testLiveBackendDemElevationEndpoint() {
         // Query live Dreeve DEM elevation endpoint via Retrofit/OkHttp
         val client = okhttp3.OkHttpClient()
